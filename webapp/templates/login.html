@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-wrapper">
+    <div class="card auth-card grad-border reveal" data-spotlight data-tilt>
+        <div class="card-body">
+            <h3 class="text-center">Welcome Back</h3>
+            <form method="post">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-accent w-100">Login</button>
+            </form>
+            <p class="text-center mt-4 mb-0 text-muted">
+                Don't have an account?
+                <a href="{{ url_for('register') }}" class="auth-link">Register</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

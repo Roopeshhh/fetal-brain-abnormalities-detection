@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <span class="hero-badge mb-2">Prediction Studio</span>
+        <h1>Analyze Ultrasound Scan</h1>
+        <p>Upload an ultrasound image and enter patient details to classify fetal brain conditions with the Swin Transformer AI model.</p>
+    </div>
+    <a href="{{ url_for('profile') }}" class="btn btn-outline-accent">View History</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="upload-card h-100 reveal" data-spotlight data-tilt>
+            <div class="card-body p-4">
+                <div class="upload-area grad-border text-center" id="uploadArea">
+                    {% if image_file %}
+                        <img src="{{ url_for('static', filename='uploads/' + image_file) }}"
+                             class="img-fluid preview-img" alt="Ultrasound">
+                    {% else %}
+                        <div id="placeholder">
+                            <div class="mb-3">
+                                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <p class="upload-text">Upload Ultrasound Image</p>
+                            <p class="upload-hint">JPG, JPEG, PNG or BMP</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="upload-card h-100 reveal" data-spotlight data-tilt>
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-muted text-uppercase small mb-3" style="letter-spacing:1px;font-weight:600;">
+                        Patient Details
+                    </h6>
+                    <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="patientName" class="form-label">Patient Name</label>
+                                <input type="text" class="form-control" id="patientName" name="patient_name"
+                                       placeholder="Enter patient name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="patientEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="patientEmail" name="patient_email"
+                                       placeholder="patient@example.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="patientPhone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="patientPhone" name="patient_phone"
+                                       placeholder="Enter phone number">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fileInput" class="form-label">Ultrasound Image</label>
+                                <input type="file" class="form-control" id="fileInput" name="file"
+                                       accept=".jpg,.jpeg,.png,.bmp" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="patientMessage" class="form-label">Message / Notes</label>
+                                <textarea class="form-control" id="patientMessage" name="patient_message"
+                                          rows="2" placeholder="Any additional notes about the patient"></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-accent w-100 mt-3" id="predictBtn">
+                            <span id="btnText">Analyze Image</span>
+                            <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        </button>
+                    </form>
+                    {% if prediction %}
+                        <div class="result-section mt-4">
+                            <p class="result-label">Detection Result</p>
+                            <h3 class="result-class">{{ prediction }}</h3>
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Confidence</span>
+                                    <span>{{ confidence }}%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar"
+                                         style="width: {{ confidence }}%"></div>
+                                </div>
+                            </div>
+                            <a href="{{ url_for('profile') }}" class="btn btn-outline-accent w-100 mt-3">
+                                View Prediction History
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm')?.addEventListener('submit', function() {
+    document.getElementById('btnText').textContent = 'Analyzing...';
+    document.getElementById('btnSpinner').classList.remove('d-none');
+    document.getElementById('predictBtn').disabled = true;
+});
+
+document.getElementById('fileInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const area = document.getElementById('uploadArea');
+            const ph = document.getElementById('placeholder');
+            if (ph) ph.remove();
+            area.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = ev.target.result;
+            img.className = 'img-fluid preview-img';
+            img.alt = 'Preview';
+            area.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

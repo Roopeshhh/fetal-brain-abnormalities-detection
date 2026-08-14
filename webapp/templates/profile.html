@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="profile-header grad-border reveal" data-spotlight data-tilt>
+            <div class="avatar-circle mb-3">
+                <span>{{ user['name'][0] | upper }}</span>
+            </div>
+            <h5 class="fw-bold mb-1">{{ user['name'] }}</h5>
+            <p class="text-muted small mb-1">{{ user['email'] }}</p>
+            <p class="text-muted small mb-3">📞 {{ user['phone'] }}</p>
+            <hr class="border-secondary my-3">
+            <div class="d-flex justify-content-around">
+                <div class="stat-box flex-fill me-2">
+                    <h4>{{ predictions | length }}</h4>
+                    <small>Scans</small>
+                </div>
+                <div class="stat-box flex-fill ms-2">
+                    <h4>98.70%</h4>
+                    <small>Accuracy</small>
+                </div>
+            </div>
+            <hr class="border-secondary my-3">
+            <p class="text-muted small mb-0">
+                Joined {{ user['created_at'] | replace('T', ' ') | truncate(10, true, '') }}
+            </p>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card grad-border reveal" data-spotlight>
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0 fw-bold">Prediction History</h5>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-accent align-self-center">{{ predictions | length }} total</span>
+                    {% if predictions %}
+                        <a href="{{ url_for('export_csv') }}" class="btn btn-outline-accent btn-sm">CSV</a>
+                        <a href="{{ url_for('export_pdf') }}" class="btn btn-accent btn-sm">PDF Report</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if predictions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Image</th>
+                                    <th>Patient</th>
+                                    <th>Contact</th>
+                                    <th>Result</th>
+                                    <th>Confidence</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Download</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in predictions %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <img src="{{ url_for('static', filename='uploads/' + p['filename']) }}"
+                                             class="thumb-img" alt="Scan">
+                                    </td>
+                                    <td>{{ p['patient_name'] or '-' }}</td>
+                                    <td class="small text-muted">
+                                        {% if p['patient_email'] %}{{ p['patient_email'] }}<br>{% endif %}
+                                        {% if p['patient_phone'] %}{{ p['patient_phone'] }}{% endif %}
+                                    </td>
+                                    <td><span class="badge bg-success">{{ p['result_class'] }}</span></td>
+                                    <td>{{ p['confidence'] }}%</td>
+                                    <td class="text-muted small">
+                                        {{ p['created_at'] | replace('T', ' ') | truncate(19, true, '') }}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <a href="{{ url_for('export_single_csv', prediction_id=p['id']) }}"
+                                               class="btn btn-outline-accent btn-sm" title="Download CSV">
+                                                CSV
+                                            </a>
+                                            <a href="{{ url_for('export_single_pdf', prediction_id=p['id']) }}"
+                                               class="btn btn-accent btn-sm" title="Download PDF">
+                                                PDF
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted mb-0">No predictions yet.</p>
+                        <a href="{{ url_for('analyze') }}" class="btn btn-accent mt-3">Analyze an Image</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
