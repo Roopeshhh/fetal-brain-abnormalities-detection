@@ -1,6 +1,14 @@
 import os
 import sqlite3
 import uuid
+import smtplib
+import json
+import urllib.request
+import mimetypes
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from datetime import datetime, timedelta
 
 import torch
@@ -87,6 +95,18 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
+
+            CREATE TABLE IF NOT EXISTS support_tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                phone TEXT,
+                category TEXT,
+                subject TEXT,
+                message TEXT NOT NULL,
+                attachment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
         try:
             db.execute("ALTER TABLE users ADD COLUMN name TEXT")
@@ -160,6 +180,93 @@ def predict_image(filepath):
         predicted_class = classes[pred.item()]
     return predicted_class.replace("_", " ").title(), round(confidence.item() * 100, 2)
 
+# Web3Forms API Configuration
+WEB3FORMS_KEY = os.environ.get("WEB3FORMS_ACCESS_KEY", "684d2858-47fb-48e5-bacb-9885f10cc2b5")
+
+def send_web3forms_ticket(name, email, phone, category, subject, message):
+    access_key = os.environ.get("WEB3FORMS_ACCESS_KEY", WEB3FORMS_KEY)
+    if not access_key:
+        print("[Web3Forms Note] Set WEB3FORMS_ACCESS_KEY to activate Web3Forms email delivery.")
+        return False
+
+    try:
+        url = "https://api.web3forms.com/submit"
+        full_message = f"Doctor/User Name: {name}\nDoctor Email: {email}\nPhone Number: {phone or 'Not Provided'}\nCategory: {category or 'General Support'}\n\nIssue Details:\n{message}"
+
+        payload = {
+            "access_key": access_key,
+            "name": name,
+            "email": email,
+            "subject": f"[FetalBrain Support - {category}] {subject or 'New Support Ticket'}",
+            "message": full_message,
+            "from_name": "FetalBrain AI Support Desk"
+        }
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "FetalBrainAI/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=12) as response:
+            res = json.loads(response.read().decode("utf-8"))
+            print("[Web3Forms API Response]:", res)
+            if res.get("success"):
+                print("[Web3Forms] SUCCESS! Email Delivered to dhanushre08@gmail.com!")
+                return True
+            else:
+                print("[Web3Forms API Error Message]:", res.get("message"))
+    except Exception as e:
+        print("[Web3Forms Exception]:", str(e))
+    return False
+
+def send_support_email(name, email, phone, category, subject, message):
+    receiver_email = os.environ.get("RECIPIENT_EMAIL", "dhanushre08@gmail.com")
+    smtp_server = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("MAIL_PORT", 587))
+    smtp_user = os.environ.get("MAIL_USERNAME")
+    smtp_password = os.environ.get("MAIL_PASSWORD")
+
+    email_body = f"""
+==================================================
+NEW CLINICAL / TECHNICAL SUPPORT TICKET SUBMITTED
+==================================================
+Date/Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Doctor/User Name: {name}
+Doctor Email: {email}
+Phone Number: {phone or 'Not Provided'}
+Category: {category or 'General Support'}
+Subject: {subject or 'No Subject'}
+
+MESSAGE / ISSUE DESCRIPTION:
+--------------------------------------------------
+{message}
+"""
+
+    print("--------------------------------------------------")
+    print("SUPPORT TICKET DISPATCH LOG:")
+    print(email_body)
+    print("--------------------------------------------------")
+
+    web3_sent = send_web3forms_ticket(name, email, phone, category, subject, message)
+
+    if not web3_sent and smtp_user and smtp_password:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = smtp_user
+            msg["To"] = receiver_email
+            msg["Subject"] = f"[FetalBrain Support - {category}] {subject or 'New Support Ticket'}"
+            msg.attach(MIMEText(email_body, "plain"))
+
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, receiver_email, msg.as_string())
+            server.quit()
+            print("Support Ticket Email sent successfully via SMTP!")
+        except Exception as e:
+            print("SMTP Send Error:", str(e))
+
 # ==========================================
 # ROUTES
 # ==========================================
@@ -179,17 +286,32 @@ def contact():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
+        phone = request.form.get("phone", "").strip()
+        category = request.form.get("category", "General Support").strip()
         subject = request.form.get("subject", "").strip()
         message = request.form.get("message", "").strip()
 
         if not name or not email or not message:
-            flash("Please fill in your name, email and message.", "danger")
-        else:
-            flash(
-                f"Thanks, {name}! Your message has been received. "
-                f"We will reply to {email} soon.",
-                "success"
-            )
+            flash("Please fill in your name, email address, and issue description.", "danger")
+            return redirect(url_for("contact"))
+
+        db = get_db()
+        db.execute(
+            """INSERT INTO support_tickets
+               (name, email, phone, category, subject, message)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (name, email, phone, category, subject, message)
+        )
+        db.commit()
+
+        send_support_email(name, email, phone, category, subject, message)
+
+        contact_info = f"at {email}" + (f" or {phone}" if phone else "")
+        flash(
+            f"Thank you, Dr. {name}! Your support ticket has been submitted to our engineering team. "
+            f"We will review your request and contact you {contact_info} shortly.",
+            "success"
+        )
         return redirect(url_for("contact"))
 
     return render_template("contact.html")

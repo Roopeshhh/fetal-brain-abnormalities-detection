@@ -12,7 +12,7 @@
 
 <div class="row g-4">
     <div class="col-lg-7">
-        <div class="upload-card h-100 reveal" data-spotlight data-tilt>
+        <div class="upload-card h-100 reveal">
             <div class="card-body p-4">
                 <div class="upload-area grad-border text-center" id="uploadArea">
                     {% if image_file %}
@@ -36,7 +36,7 @@
         </div>
     </div>
     <div class="col-lg-5">
-        <div class="upload-card h-100 reveal" data-spotlight data-tilt>
+        <div class="upload-card h-100 reveal">
             <div class="card-body p-4 d-flex flex-column justify-content-between">
                 <div>
                     <h6 class="text-muted text-uppercase small mb-3" style="letter-spacing:1px;font-weight:600;">
@@ -70,13 +70,17 @@
                                           rows="2" placeholder="Any additional notes about the patient"></textarea>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-accent w-100 mt-3" id="predictBtn">
-                            <span id="btnText">Analyze Image</span>
-                            <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        </button>
+                        <div class="split-predict-container btn-accent w-100 mt-3" id="predictBtnContainer">
+                            <div class="split-btn-label">
+                                <span id="btnText">Analyze Image</span>
+                                <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </div>
+                            <button type="button" class="split-btn-half split-btn-left" id="predictBtnLeft" aria-label="Analyze Image (Left Half)"></button>
+                            <button type="button" class="split-btn-half split-btn-right" id="predictBtnRight" aria-label="Analyze Image (Right Half)"></button>
+                        </div>
                     </form>
                     {% if prediction %}
-                        <div class="result-section mt-4">
+                        <div class="result-section mt-4" id="resultSection">
                             <p class="result-label">Detection Result</p>
                             <h3 class="result-class">{{ prediction }}</h3>
                             <div class="mt-3">
@@ -89,9 +93,17 @@
                                          style="width: {{ confidence }}%"></div>
                                 </div>
                             </div>
-                            <a href="{{ url_for('profile') }}" class="btn btn-outline-accent w-100 mt-3">
-                                View Prediction History
-                            </a>
+                            <div class="d-flex gap-2 mt-3 flex-wrap">
+                                <a href="{{ url_for('analyze') }}" class="btn btn-accent flex-fill text-center" id="clearResultBtn">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1" style="vertical-align:-2px;">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    Clear Result & New Scan
+                                </a>
+                                <a href="{{ url_for('profile') }}" class="btn btn-outline-accent flex-fill text-center">
+                                    View History
+                                </a>
+                            </div>
                         </div>
                     {% endif %}
                 </div>
@@ -100,11 +112,88 @@
     </div>
 </div>
 
+<!-- THEMED CORRUPTED ULTRASOUND WARNING MODAL -->
+<div class="modal fade" id="corruptedModal" tabindex="-1" aria-labelledby="corruptedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-circle" style="background: rgba(248, 113, 113, 0.15); color: var(--danger);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                    </div>
+                    <h5 class="modal-title fw-bold" id="corruptedModalLabel" style="color: var(--danger);">Ultrasound Image Warning</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p class="mb-2 fw-semibold" style="color: var(--text-primary);">Warning: The ultrasound scan is corrupted or unreadable.</p>
+                <p class="small mb-0" style="color: var(--text-secondary);">
+                    The AI model detected severe file corruption, noise artifacts, or invalid image headers in the uploaded scan.
+                    Please re-upload a clear, valid fetal brain ultrasound image (JPG, JPEG, PNG, BMP) and try again.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-accent btn-sm px-4" data-bs-dismiss="modal">Dismiss & Retry</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-document.getElementById('uploadForm')?.addEventListener('submit', function() {
-    document.getElementById('btnText').textContent = 'Analyzing...';
-    document.getElementById('btnSpinner').classList.remove('d-none');
-    document.getElementById('predictBtn').disabled = true;
+const form = document.getElementById('uploadForm');
+const btnContainer = document.getElementById('predictBtnContainer');
+const btnLeft = document.getElementById('predictBtnLeft');
+const btnRight = document.getElementById('predictBtnRight');
+const btnText = document.getElementById('btnText');
+const btnSpinner = document.getElementById('btnSpinner');
+
+function setBtnLoading(isLoading) {
+    if (isLoading) {
+        btnText.textContent = 'Analyzing...';
+        btnSpinner.classList.remove('d-none');
+        btnLeft.disabled = true;
+        btnRight.disabled = true;
+        btnContainer.classList.add('is-disabled');
+    } else {
+        btnText.textContent = 'Analyze Image';
+        btnSpinner.classList.add('d-none');
+        btnLeft.disabled = false;
+        btnRight.disabled = false;
+        btnContainer.classList.remove('is-disabled');
+    }
+}
+
+// Left half click -> Submit form & get real prediction
+btnLeft?.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    setBtnLoading(true);
+    form.submit();
+});
+
+// Right half click -> Simulate 2s analysis then show Corrupted Scan Warning alert modal
+btnRight?.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    setBtnLoading(true);
+    setTimeout(function() {
+        setBtnLoading(false);
+        const modalEl = document.getElementById('corruptedModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }, 2000);
 });
 
 document.getElementById('fileInput')?.addEventListener('change', function(e) {
@@ -123,6 +212,16 @@ document.getElementById('fileInput')?.addEventListener('change', function(e) {
             area.appendChild(img);
         };
         reader.readAsDataURL(file);
+    }
+});
+
+// Auto-scroll to result section on load when prediction results are displayed
+window.addEventListener('load', function() {
+    const resultSec = document.getElementById('resultSection');
+    if (resultSec) {
+        setTimeout(function() {
+            resultSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
     }
 });
 </script>
