@@ -1080,6 +1080,12 @@ html[data-theme="dark"] .accordion-button::after {
   max-width: 420px;
   background: var(--glass-bg);
   box-shadow: var(--shadow-lg);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.auth-card:hover {
+  border-color: var(--accent-soft);
+  box-shadow: var(--shadow-lg), 0 0 20px var(--accent-soft);
 }
 
 .auth-card .card-body {

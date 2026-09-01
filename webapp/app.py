@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import torch
 import timm
 from torchvision import transforms
-from PIL import Image
+from PIL import Image as PILImage
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, session, g, Response
@@ -22,11 +22,15 @@ from flask import (
 import csv
 import io
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
+from reportlab.platypus import (
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer,
+    HRFlowable, KeepTogether, Image as RLImage
+)
+from reportlab.pdfgen import canvas
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -171,7 +175,7 @@ def allowed_file(filename):
 
 
 def predict_image(filepath):
-    image = Image.open(filepath).convert("RGB")
+    image = PILImage.open(filepath).convert("RGB")
     x = transform(image).unsqueeze(0)
     with torch.no_grad():
         outputs = model(x)
@@ -181,7 +185,7 @@ def predict_image(filepath):
     return predicted_class.replace("_", " ").title(), round(confidence.item() * 100, 2)
 
 # Web3Forms API Configuration
-WEB3FORMS_KEY = os.environ.get("WEB3FORMS_ACCESS_KEY", "684d2858-47fb-48e5-bacb-9885f10cc2b5")
+WEB3FORMS_KEY = os.environ.get("WEB3FORMS_ACCESS_KEY", "a5c0c025-e91e-4122-b10a-9f4a14a1af3f")
 
 def send_web3forms_ticket(name, email, phone, category, subject, message):
     access_key = os.environ.get("WEB3FORMS_ACCESS_KEY", WEB3FORMS_KEY)
@@ -191,12 +195,13 @@ def send_web3forms_ticket(name, email, phone, category, subject, message):
 
     try:
         url = "https://api.web3forms.com/submit"
-        full_message = f"Doctor/User Name: {name}\nDoctor Email: {email}\nPhone Number: {phone or 'Not Provided'}\nCategory: {category or 'General Support'}\n\nIssue Details:\n{message}"
+        full_message = f"Doctor/User Name: {name}\nDoctor Email: {email}\nPhone Number: {phone or 'Not Provided'}\nCategory: {category or 'General Support'}\n\nsubject: {subject or 'No Subject'}\n\nIssue Details:\n{message}"
 
         payload = {
             "access_key": access_key,
             "name": name,
             "email": email,
+            "category": category or "General Support",
             "subject": f"[FetalBrain Support - {category}] {subject or 'New Support Ticket'}",
             "message": full_message,
             "from_name": "FetalBrain AI Support Desk"
@@ -212,7 +217,7 @@ def send_web3forms_ticket(name, email, phone, category, subject, message):
             res = json.loads(response.read().decode("utf-8"))
             print("[Web3Forms API Response]:", res)
             if res.get("success"):
-                print("[Web3Forms] SUCCESS! Email Delivered to dhanushre08@gmail.com!")
+                print("[Web3Forms] SUCCESS! Email Delivered to fetalbraingroup@gmail.com!")
                 return True
             else:
                 print("[Web3Forms API Error Message]:", res.get("message"))
@@ -221,7 +226,7 @@ def send_web3forms_ticket(name, email, phone, category, subject, message):
     return False
 
 def send_support_email(name, email, phone, category, subject, message):
-    receiver_email = os.environ.get("RECIPIENT_EMAIL", "dhanushre08@gmail.com")
+    receiver_email = os.environ.get("RECIPIENT_EMAIL", "fetalbraingroup@gmail.com")
     smtp_server = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
     smtp_port = int(os.environ.get("MAIL_PORT", 587))
     smtp_user = os.environ.get("MAIL_USERNAME")
@@ -437,59 +442,383 @@ def build_csv_response(predictions):
     )
 
 
-def build_pdf_response(predictions, title="FetalBrain AI Report"):
+# ==========================================
+# PROFESSIONAL PDF REPORT CANVAS
+# ==========================================
+
+class ProfessionalReportCanvas(canvas.Canvas):
+    """Custom canvas that draws decorative page borders, teal header accent,
+    and an institution footer with page numbering on every page."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pages = []
+
+    def showPage(self):
+        self.pages.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self.pages)
+        for page in self.pages:
+            self.__dict__.update(page)
+            self._draw_page_decorations(num_pages)
+            super().showPage()
+        super().save()
+
+    def _draw_page_decorations(self, total_pages):
+        self.saveState()
+        page_width, page_height = A4
+
+        # Outer teal border
+        margin = 10 * mm
+        self.setStrokeColor(colors.HexColor("#0f766e"))
+        self.setLineWidth(1.5)
+        self.rect(margin, margin, page_width - 2 * margin, page_height - 2 * margin)
+
+        # Inner grey border
+        inner_margin = 12 * mm
+        self.setStrokeColor(colors.HexColor("#cbd5e1"))
+        self.setLineWidth(0.5)
+        self.rect(inner_margin, inner_margin, page_width - 2 * inner_margin, page_height - 2 * inner_margin)
+
+        # Top teal accent bar
+        self.setFillColor(colors.HexColor("#0f766e"))
+        self.rect(inner_margin, page_height - 14 * mm,
+                  page_width - 2 * inner_margin, 2 * mm, fill=True, stroke=False)
+
+        # Footer separator line
+        footer_y = 15 * mm
+        self.setStrokeColor(colors.HexColor("#cbd5e1"))
+        self.setLineWidth(0.5)
+        self.line(inner_margin, footer_y, page_width - inner_margin, footer_y)
+
+        # Footer institution text
+        self.setFont("Helvetica", 8)
+        self.setFillColor(colors.HexColor("#64748b"))
+        self.drawString(
+            14 * mm, 11 * mm,
+            "AIT Institute of Technology & Research Center • Chikkamagaluru, Karnataka • fetalbraingroup@gmail.com"
+        )
+        # Footer page number
+        page_str = f"Page {self._pageNumber} of {total_pages}"
+        self.drawRightString(page_width - 14 * mm, 11 * mm, page_str)
+        self.restoreState()
+
+
+# ==========================================
+# PROFESSIONAL PDF RESPONSE BUILDER
+# ==========================================
+
+def _build_single_prediction_story(p, styles_map):
+    """Build the reportlab story elements for a single prediction record."""
+    hospital_header_style = styles_map["hospital_header"]
+    dept_style = styles_map["dept"]
+    sub_address_style = styles_map["sub_address"]
+    doc_title_style = styles_map["doc_title"]
+    meta_style = styles_map["meta"]
+    section_heading = styles_map["section_heading"]
+    label_style = styles_map["label"]
+    value_style = styles_map["value"]
+    body_style = styles_map["body"]
+    disclaimer_style = styles_map["disclaimer"]
+
+    story = []
+
+    # ── 1. Header ────────────────────────────────────────────────────────────
+    scan_date = str(p["created_at"])[:19] if p["created_at"] else "N/A"
+    report_id = f"AIT-FBD-{p['id']:06d}"
+
+    header_left = [
+        Paragraph("AIT INSTITUTE OF TECHNOLOGY & HEALTH SCIENCES", hospital_header_style),
+        Spacer(1, 1 * mm),
+        Paragraph("DEPARTMENT OF RADIODIAGNOSIS & FETAL MEDICINE", dept_style),
+        Paragraph("Chikkamagaluru, Karnataka 577102 • fetalbraingroup@gmail.com", sub_address_style),
+    ]
+    header_right = [
+        Paragraph("AI NEUROSONOGRAM REPORT", doc_title_style),
+        Spacer(1, 1 * mm),
+        Paragraph(f"<b>Report ID:</b> {report_id}", meta_style),
+        Paragraph(f"<b>Scan Date:</b> {scan_date}", meta_style),
+        Paragraph("<b>Status:</b> Verified Final", meta_style),
+    ]
+    header_table = Table([[header_left, header_right]], colWidths=[110 * mm, 70 * mm])
+    header_table.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(header_table)
+    story.append(HRFlowable(
+        width="100%", thickness=1,
+        color=colors.HexColor("#0f766e"),
+        spaceAfter=5 * mm, spaceBefore=2 * mm
+    ))
+
+    # ── 2. Patient Demographics ───────────────────────────────────────────────
+    story.append(Paragraph("PATIENT DEMOGRAPHICS & PROJECT METADATA", section_heading))
+
+    pat_name  = p["patient_name"]    or "—"
+    pat_email = p["patient_email"]   or "—"
+    pat_phone = p["patient_phone"]   or "—"
+    pat_msg   = p["patient_message"] or "Routine Fetal Neurosonogram"
+
+    demo_data = [
+        [
+            Paragraph("Patient Name:",     label_style), Paragraph(pat_name,  value_style),
+            Paragraph("Report ID / MRN:",  label_style), Paragraph(report_id, value_style),
+        ],
+        [
+            Paragraph("Contact Phone:",    label_style), Paragraph(pat_phone, value_style),
+            Paragraph("Email Address:",    label_style), Paragraph(pat_email, value_style),
+        ],
+        [
+            Paragraph("Diagnostic Unit:", label_style),
+            Paragraph("<b>Department of Radiodiagnosis & Fetal Imaging</b>", value_style),
+            Paragraph("Clinical Note:",    label_style), Paragraph(pat_msg,   value_style),
+        ],
+    ]
+    demo_table = Table(demo_data, colWidths=[28 * mm, 62 * mm, 30 * mm, 60 * mm])
+    demo_table.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+        ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.4, colors.HexColor("#e2e8f0")),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    story.append(demo_table)
+    story.append(Spacer(1, 5 * mm))
+
+    # ── 3. Scan Image + AI Findings ───────────────────────────────────────────
+    story.append(Paragraph("FETAL BRAIN SCAN & AI DIAGNOSTIC FINDINGS", section_heading))
+
+    img_path = os.path.join(UPLOAD_DIR, p["filename"]) if p["filename"] else None
+    if img_path and os.path.exists(img_path):
+        img_flowable = RLImage(img_path, width=70 * mm, height=52 * mm)
+    else:
+        img_flowable = Paragraph("<i>[ Fetal Brain Ultrasound Image ]</i>", value_style)
+
+    img_box = Table([[img_flowable]], colWidths=[72 * mm], rowHeights=[54 * mm])
+    img_box.setStyle(TableStyle([
+        ("ALIGN",      (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN",     (0, 0), (-1, -1), "MIDDLE"),
+        ("BOX",        (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0f172a")),
+    ]))
+
+    result_class = p["result_class"]
+    confidence   = p["confidence"]
+
+    if result_class.lower() == "normal":
+        badge_bg  = "#dcfce7"
+        badge_fg  = "#15803d"
+        status_text = "NORMAL SCAN"
+    else:
+        badge_bg  = "#fee2e2"
+        badge_fg  = "#b91c1c"
+        status_text = "ANOMALY DETECTED"
+
+    ai_badge_p = Paragraph(
+        f'<font color="{badge_fg}"><b>{status_text} • {result_class.upper()}</b></font>',
+        ParagraphStyle("Badge", fontName="Helvetica-Bold", fontSize=10, leading=12)
+    )
+    ai_details = [
+        [Paragraph("Primary AI Diagnosis:",    label_style), Paragraph(f"<b>{result_class}</b>",                   value_style)],
+        [Paragraph("Detection Confidence:",    label_style), Paragraph(f"<b>{confidence}%</b> (High Certainty)",   value_style)],
+        [Paragraph("AI Architecture:",         label_style), Paragraph("Swin Transformer (Swin-Tiny)",             value_style)],
+        [Paragraph("Scan Classification:",     label_style), ai_badge_p],
+    ]
+    ai_table = Table(ai_details, colWidths=[35 * mm, 68 * mm])
+    ai_table.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
+        ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
+    ]))
+
+    scan_ai_layout = Table([[img_box, ai_table]], colWidths=[75 * mm, 105 * mm])
+    scan_ai_layout.setStyle(TableStyle([
+        ("VALIGN",       (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(scan_ai_layout)
+    story.append(Spacer(1, 5 * mm))
+
+    # ── 4. Clinical Impressions ───────────────────────────────────────────────
+    story.append(Paragraph("CLINICAL IMPRESSION & RECOMMENDATIONS", section_heading))
+
+    if result_class.lower() == "normal":
+        clinical_desc = (
+            "No structural anomalies detected in the fetal brain scan. "
+            "Cerebral hemispheres, ventricles, cerebellum, and midline structures appear within normal limits "
+            "for the reported gestational age."
+        )
+        next_steps = (
+            "• Continue routine antenatal care and standard growth monitoring.<br/>"
+            "• Repeat anomaly scan as scheduled by the treating obstetrician."
+        )
+    else:
+        clinical_desc = (
+            f"The deep learning neurosonogram model identified features consistent with <b>{result_class}</b> "
+            f"with an AI confidence score of <b>{confidence}%</b>. "
+            "Findings should be correlated with detailed sonographic assessment by a qualified Fetal Medicine Specialist."
+        )
+        next_steps = (
+            "• High-resolution target fetal neurosonogram or fetal MRI recommended for anatomical confirmation.<br/>"
+            "• Serial ultrasound monitoring to assess lesion dimensions, mass effect, and fetal ventricular symmetry.<br/>"
+            "• Referral to a Fetal Medicine Unit for multidisciplinary evaluation and counselling."
+        )
+
+    clinical_text = (
+        f"<b>Diagnostic Summary:</b> {clinical_desc}<br/>"
+        f"<b>Recommended Next Steps:</b><br/>{next_steps}"
+    )
+    obs_box = Table([[Paragraph(clinical_text, body_style)]], colWidths=[180 * mm])
+    obs_box.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#ffffff")),
+        ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#94a3b8")),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(obs_box)
+    story.append(Spacer(1, 6 * mm))
+
+    # ── 5. Verification & Sign-off ────────────────────────────────────────────
+    story.append(Paragraph("VERIFICATION & CLINICAL REVIEW", section_heading))
+
+    ver_code = f"VER-AIT-{p['id']:06d}-X"
+    sig_left = [
+        Paragraph(f"<b>AI System:</b> FetalBrain AI Decision Support", value_style),
+        Paragraph(f"<b>Verification Code:</b> {ver_code}",             value_style),
+        Spacer(1, 2 * mm),
+        Paragraph("<i>Digitally verified by FetalBrain AI System</i>", sub_address_style),
+    ]
+    sig_right = [
+        Paragraph(
+            "<b>Department of Radiodiagnosis & Fetal Medicine</b>",
+            ParagraphStyle("DocSig", fontName="Helvetica-Bold", fontSize=9, alignment=2)
+        ),
+        Paragraph(
+            "<b>Fetal Neurosonography & AI Diagnostics Group</b>",
+            ParagraphStyle("TeamNames", fontName="Helvetica-Bold", fontSize=8.5,
+                           textColor=colors.HexColor("#0f766e"), alignment=2)
+        ),
+        Paragraph("AIT Institute of Technology, Chikkamagaluru", meta_style),
+        Paragraph("Email: fetalbraingroup@gmail.com",             meta_style),
+    ]
+    sig_table = Table([[sig_left, sig_right]], colWidths=[100 * mm, 80 * mm])
+    sig_table.setStyle(TableStyle([
+        ("VALIGN",       (0, 0), (-1, -1), "BOTTOM"),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(sig_table)
+    story.append(Spacer(1, 4 * mm))
+
+    # ── 6. Legal Disclaimer ───────────────────────────────────────────────────
+    disclaimer_text = (
+        "<b>IMPORTANT NOTICE / MEDICAL DISCLAIMER:</b> This automated diagnostic report is produced by "
+        "FetalBrain AI as a clinical decision support tool developed at AIT Chikkamagaluru by "
+        "the Fetal Neurosonography & AI Diagnostic Research Group. The predictions and confidence metrics generated should not "
+        "replace professional medical judgment. All findings must be independently verified by a "
+        "licensed Radiologist or Fetal Medicine Specialist."
+    )
+    disc_box = Table([[Paragraph(disclaimer_text, disclaimer_style)]], colWidths=[180 * mm])
+    disc_box.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+        ("BOX",           (0, 0), (-1, -1), 0.4, colors.HexColor("#e2e8f0")),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(disc_box)
+
+    return story
+
+
+def build_professional_pdf_response(predictions, filename="fetal_brain_report.pdf"):
+    """Generate a professional A4 diagnostic health report PDF for one or more predictions."""
+    from reportlab.platypus import PageBreak
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
         leftMargin=15 * mm,
         rightMargin=15 * mm,
-        topMargin=15 * mm,
-        bottomMargin=15 * mm,
-        title=title
+        topMargin=16 * mm,
+        bottomMargin=18 * mm,
+        title="FetalBrain AI Diagnostic Report - AIT Chikkamagaluru"
     )
 
-    styles = getSampleStyleSheet()
-    title_style = styles["Title"]
-    title_style.alignment = TA_CENTER
-    heading_style = styles["Heading2"]
+    # ── Shared paragraph styles ───────────────────────────────────────────────
+    styles_map = {
+        "hospital_header": ParagraphStyle(
+            "HospitalHeader", fontName="Helvetica-Bold", fontSize=15,
+            leading=18, textColor=colors.HexColor("#0f766e")
+        ),
+        "dept": ParagraphStyle(
+            "DeptStyle", fontName="Helvetica-Bold", fontSize=9,
+            leading=12, textColor=colors.HexColor("#334155")
+        ),
+        "sub_address": ParagraphStyle(
+            "SubAddress", fontName="Helvetica", fontSize=8,
+            leading=11, textColor=colors.HexColor("#64748b")
+        ),
+        "doc_title": ParagraphStyle(
+            "DocTitle", fontName="Helvetica-Bold", fontSize=13,
+            leading=16, textColor=colors.HexColor("#1e293b"), alignment=2
+        ),
+        "meta": ParagraphStyle(
+            "MetaText", fontName="Helvetica", fontSize=8,
+            leading=11, textColor=colors.HexColor("#475569"), alignment=2
+        ),
+        "section_heading": ParagraphStyle(
+            "SectionHeading", fontName="Helvetica-Bold", fontSize=10,
+            leading=13, textColor=colors.HexColor("#0f766e"), spaceAfter=4
+        ),
+        "label": ParagraphStyle(
+            "LabelStyle", fontName="Helvetica-Bold", fontSize=8.5,
+            leading=11, textColor=colors.HexColor("#475569")
+        ),
+        "value": ParagraphStyle(
+            "ValueStyle", fontName="Helvetica", fontSize=8.5,
+            leading=11, textColor=colors.HexColor("#0f172a")
+        ),
+        "body": ParagraphStyle(
+            "BodyStyle", fontName="Helvetica", fontSize=8.5,
+            leading=12, textColor=colors.HexColor("#334155")
+        ),
+        "disclaimer": ParagraphStyle(
+            "DisclaimerStyle", fontName="Helvetica-Oblique", fontSize=7.5,
+            leading=10, textColor=colors.HexColor("#64748b")
+        ),
+    }
 
-    elements = [Paragraph(title, title_style), Spacer(1, 4 * mm)]
-    elements.append(Paragraph("FetalBrain AI Detection Report", heading_style))
-    elements.append(Spacer(1, 6 * mm))
+    full_story = []
+    for i, p in enumerate(predictions):
+        full_story.extend(_build_single_prediction_story(p, styles_map))
+        if i < len(predictions) - 1:
+            full_story.append(PageBreak())
 
-    data = [["#", "Patient", "Email", "Phone", "Result", "Confidence", "Date"]]
-    for i, p in enumerate(predictions, 1):
-        data.append([
-            str(i),
-            p["patient_name"] or "-",
-            p["patient_email"] or "-",
-            p["patient_phone"] or "-",
-            p["result_class"],
-            f'{p["confidence"]}%',
-            str(p["created_at"])
-        ])
-
-    table = Table(data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0e7e8e")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cbd5e1")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f1f5f9")]),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ]))
-    elements.append(table)
-
-    doc.build(elements)
+    doc.build(full_story, canvasmaker=ProfessionalReportCanvas)
     buffer.seek(0)
 
     return Response(
         buffer.getvalue(),
         mimetype="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=fetal_brain_report.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
 
@@ -502,7 +831,10 @@ def export_csv():
 @app.route("/profile/export/pdf")
 @login_required
 def export_pdf():
-    return build_pdf_response(get_user_predictions())
+    return build_professional_pdf_response(
+        get_user_predictions(),
+        filename="fetal_brain_full_report.pdf"
+    )
 
 
 @app.route("/profile/export/csv/<int:prediction_id>")
@@ -522,7 +854,7 @@ def export_single_pdf(prediction_id):
     if not p:
         flash("Prediction not found.", "danger")
         return redirect(url_for("profile"))
-    return build_pdf_response([p], title="FetalBrain AI - Single Prediction Report")
+    return build_professional_pdf_response([p], filename=f"fetal_report_{prediction_id}.pdf")
 
 
 @app.route("/analyze")
