@@ -58,6 +58,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # DATABASE
 # ==========================================
 
+# Admin Credentials
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(DB_PATH)
@@ -82,6 +86,11 @@ def init_db():
                 email TEXT UNIQUE NOT NULL,
                 phone TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                organisation TEXT,
+                last_login TIMESTAMP,
+                role TEXT DEFAULT 'doctor',
+                status TEXT DEFAULT 'pending',
+                approved_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -96,8 +105,7 @@ def init_db():
                 patient_email TEXT,
                 patient_phone TEXT,
                 patient_message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS support_tickets (
@@ -111,9 +119,46 @@ def init_db():
                 attachment TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS login_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                ip_address TEXT,
+                user_agent TEXT,
+                login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
         """)
         try:
             db.execute("ALTER TABLE users ADD COLUMN name TEXT")
+            db.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN organisation TEXT")
+            db.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN last_login TIMESTAMP")
+            db.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'doctor'")
+            db.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'pending'")
+            db.commit()
+            # Set legacy existing records to approved
+            db.execute("UPDATE users SET status = 'approved' WHERE status IS NULL OR status = ''")
+            db.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN approved_at TIMESTAMP")
             db.commit()
         except sqlite3.OperationalError:
             pass
@@ -156,7 +201,7 @@ transform = transforms.Compose([
 ])
 
 # ==========================================
-# HELPERS
+# HELPERS & AUTH DECORATORS
 # ==========================================
 
 def login_required(f):
@@ -164,6 +209,16 @@ def login_required(f):
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             flash("Please log in first.", "warning")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            flash("Admin access required. Please sign in as administrator.", "danger")
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return wrapper
@@ -272,6 +327,157 @@ MESSAGE / ISSUE DESCRIPTION:
         except Exception as e:
             print("SMTP Send Error:", str(e))
 
+
+def send_admin_new_doctor_alert(name, email, phone, organisation):
+    """Sends an automated email notification to the Admin (fetalbraingroup@gmail.com)
+    alerting that a new doctor has registered and needs review/approval."""
+    receiver_email = os.environ.get("RECIPIENT_EMAIL", "fetalbraingroup@gmail.com")
+    subject = f"[FetalBrain Admin Alert] New Doctor Registration Request: Dr. {name}"
+    
+    email_body = f"""==================================================
+NEW DOCTOR REGISTRATION REQUEST AWAITING REVIEW
+==================================================
+Date/Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+CLINICIAN DETAILS:
+--------------------------------------------------
+Doctor Name: Dr. {name}
+Doctor Email: {email}
+Phone Number: {phone or 'Not Provided'}
+Hospital / Organisation: {organisation or 'Clinical Diagnostic Centre'}
+Account Status: PENDING VERIFICATION
+
+ADMIN ACTION REQUIRED:
+--------------------------------------------------
+A new doctor has registered and requested system access.
+Please review their details and approve or reject the request:
+Admin Review Link: http://127.0.0.1:5000/admin/requests
+
+=================================================="""
+
+    print("--------------------------------------------------")
+    print("ADMIN NOTIFICATION DISPATCH LOG (NEW DOCTOR REGISTRATION):")
+    print(email_body)
+    print("--------------------------------------------------")
+
+    # Send via Web3Forms API to Admin inbox (fetalbraingroup@gmail.com)
+    access_key = os.environ.get("WEB3FORMS_ACCESS_KEY", WEB3FORMS_KEY)
+    if access_key:
+        try:
+            url = "https://api.web3forms.com/submit"
+            payload = {
+                "access_key": access_key,
+                "name": f"New Doctor Request - Dr. {name}",
+                "email": email,
+                "subject": subject,
+                "message": email_body,
+                "from_name": "FetalBrain Registration Alert"
+            }
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json", "User-Agent": "FetalBrainAI/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=12) as response:
+                res = json.loads(response.read().decode("utf-8"))
+                print("[Web3Forms Admin Alert Response]:", res)
+                if res.get("success"):
+                    print("[Web3Forms] SUCCESS! New doctor registration alert delivered to fetalbraingroup@gmail.com!")
+        except Exception as e:
+            print("[Web3Forms Admin Alert Exception]:", str(e))
+
+    # Send via SMTP if configured
+    smtp_user = os.environ.get("MAIL_USERNAME")
+    smtp_password = os.environ.get("MAIL_PASSWORD")
+    smtp_server = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("MAIL_PORT", 587))
+    if smtp_user and smtp_password:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = smtp_user
+            msg["To"] = receiver_email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(email_body, "plain"))
+
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, receiver_email, msg.as_string())
+            server.quit()
+            print(f"[SMTP] Registration alert email sent to {receiver_email} successfully!")
+        except Exception as e:
+            print(f"[SMTP Alert Error]: {e}")
+
+
+def send_doctor_status_email(name, email, status, organisation=None):
+    """Sends an automated email directly to the doctor via SMTP when approved or rejected."""
+    if status == "approved":
+        subject = "[FetalBrain AI] Your Clinician Account has been APPROVED"
+        body = f"""Dear Dr. {name},
+
+Congratulations! Your clinical registration for FetalBrain AI Fetal Neurosonogram Diagnostic System has been APPROVED by the Administrator.
+
+Account Details:
+- Doctor Name: Dr. {name}
+- Registered Email: {email}
+- Affiliation: {organisation or 'Clinical Unit'}
+- Account Status: Active / Approved
+
+You can now log in to the portal and start analyzing fetal brain ultrasound scans:
+Login Portal: http://127.0.0.1:5000/login
+
+Best regards,
+FetalBrain AI Diagnostic & Research Team
+AIT Institute of Technology & Health Sciences
+Support Email: fetalbraingroup@gmail.com
+"""
+    else:
+        subject = "[FetalBrain AI] Update regarding your Clinician Registration Request"
+        body = f"""Dear Dr. {name},
+
+Thank you for your interest in the FetalBrain AI Diagnostic System.
+
+We regret to inform you that your clinical registration request for {email} could not be approved by the Administrator at this time.
+
+If you believe this decision was made in error or would like to submit updated clinical affiliation credentials, please contact our administrative desk at fetalbraingroup@gmail.com.
+
+Best regards,
+FetalBrain AI Administration Team
+AIT Institute of Technology & Health Sciences
+"""
+
+    print("==================================================")
+    print(f"AUTOMATED CLINICIAN NOTIFICATION LOG ({status.upper()}):")
+    print(f"Recipient: Dr. {name} <{email}>")
+    print(f"Subject: {subject}")
+    print("--------------------------------------------------")
+    print(body)
+    print("==================================================")
+
+    # Attempt direct SMTP delivery to doctor if configured
+    smtp_user = os.environ.get("MAIL_USERNAME")
+    smtp_password = os.environ.get("MAIL_PASSWORD")
+    smtp_server = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("MAIL_PORT", 587))
+    if smtp_user and smtp_password:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = smtp_user
+            msg["To"] = email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body, "plain"))
+
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, email, msg.as_string())
+            server.quit()
+            print(f"[SMTP] Status notification sent directly to Dr. {name} at {email} successfully!")
+        except Exception as e:
+            print(f"[SMTP Status Email Error]: {e}")
+
+
 # ==========================================
 # ROUTES
 # ==========================================
@@ -325,14 +531,15 @@ def contact():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        name = request.form["name"].strip()
-        email = request.form["email"].strip().lower()
-        phone = request.form["phone"].strip()
-        password = request.form["password"]
-        confirm = request.form["confirm_password"]
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+        organisation = request.form.get("organisation", "").strip()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
 
         if not name or not email or not phone or not password:
-            flash("All fields are required.", "danger")
+            flash("All required fields must be completed.", "danger")
             return render_template("register.html")
 
         if password != confirm:
@@ -345,16 +552,26 @@ def register():
 
         db = get_db()
         if db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
-            flash("Email already registered.", "danger")
+            flash("Email already registered. Please sign in instead.", "danger")
             return render_template("register.html")
 
         pw_hash = generate_password_hash(password)
+        org_name = organisation or "Hospital / Diagnostic Clinic"
         db.execute(
-            "INSERT INTO users (name, email, phone, password_hash) VALUES (?, ?, ?, ?)",
-            (name, email, phone, pw_hash)
+            """INSERT INTO users (name, email, phone, organisation, password_hash, status)
+               VALUES (?, ?, ?, ?, ?, 'pending')""",
+            (name, email, phone, org_name, pw_hash)
         )
         db.commit()
-        flash("Registration successful! Please log in.", "success")
+
+        # Send alert email to Administrator (fetalbraingroup@gmail.com)
+        send_admin_new_doctor_alert(name, email, phone, org_name)
+
+        flash(
+            f"Registration submitted, Dr. {name}! Your account is currently PENDING VERIFICATION by the Administrator. "
+            "You will be able to log in as soon as the administrator approves your request.",
+            "warning"
+        )
         return redirect(url_for("login"))
 
     return render_template("register.html")
@@ -363,23 +580,74 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"].strip().lower()
-        password = request.form["password"]
+        identifier = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
+        # Check for Fixed Admin Credentials
+        admin_aliases = {
+            ADMIN_USERNAME.lower(),
+            f"{ADMIN_USERNAME.lower()}@fetalbrain.org",
+            "admin",
+            "admin@fetalbrain.org"
+        }
+        if identifier in admin_aliases and password == ADMIN_PASSWORD:
+            session.clear()
+            session.permanent = True
+            session["user_id"] = "admin"
+            session["is_admin"] = True
+            session["name"] = "System Administrator"
+            session["email"] = f"{ADMIN_USERNAME}@fetalbrain.org"
+            session["role"] = "admin"
+            flash("Welcome to Admin Control Center, Administrator.", "success")
+            return redirect(url_for("admin_dashboard"))
+
+        # Check Doctor/User Database Credentials
         db = get_db()
         user = db.execute(
-            "SELECT * FROM users WHERE email = ?", (email,)
+            "SELECT * FROM users WHERE email = ?", (identifier,)
         ).fetchone()
 
         if user and check_password_hash(user["password_hash"], password):
+            # Check Account Approval Status
+            status = user["status"] if "status" in user.keys() and user["status"] else "approved"
+            if status == "pending":
+                flash(
+                    "Your doctor account is currently PENDING VERIFICATION by the Administrator. "
+                    "Access is restricted until your registration is approved.",
+                    "warning"
+                )
+                return render_template("login.html")
+            elif status == "rejected":
+                flash(
+                    "Your registration request has been REJECTED by the Administrator. Access denied.",
+                    "danger"
+                )
+                return render_template("login.html")
+
+            session.clear()
             session.permanent = True
             session["user_id"] = user["id"]
             session["name"] = user["name"]
             session["email"] = user["email"]
-            flash(f"Welcome back, {user['name']}!", "success")
+            session["role"] = "doctor"
+            session["is_admin"] = False
+
+            # Track doctor login
+            client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
+            user_agent = request.headers.get("User-Agent", "Unknown Device")[:120]
+            now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            db.execute(
+                "INSERT INTO login_logs (user_id, ip_address, user_agent, login_time) VALUES (?, ?, ?, ?)",
+                (user["id"], client_ip, user_agent, now_ts)
+            )
+            db.execute("UPDATE users SET last_login = ? WHERE id = ?", (now_ts, user["id"]))
+            db.commit()
+
+            flash(f"Welcome back, Dr. {user['name']}!", "success")
             return redirect(url_for("index"))
         else:
-            flash("Invalid email or password.", "danger")
+            flash("Invalid email/login ID or password.", "danger")
 
     return render_template("login.html")
 
@@ -387,20 +655,315 @@ def login():
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("You have been logged out.", "info")
+    flash("You have been safely logged out.", "info")
     return redirect(url_for("index"))
 
 
 @app.route("/profile")
 @login_required
 def profile():
+    if session.get("is_admin"):
+        return redirect(url_for("admin_dashboard"))
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    if not user:
+        session.clear()
+        flash("Session expired or doctor record not found. Please log in again.", "warning")
+        return redirect(url_for("login"))
     predictions = db.execute(
         "SELECT * FROM predictions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
         (session["user_id"],)
     ).fetchall()
     return render_template("profile.html", user=user, predictions=predictions)
+
+
+# ==========================================
+# ADMIN PORTAL & DOCTOR TRACKING
+# ==========================================
+
+@app.route("/admin")
+@app.route("/admin/dashboard")
+@admin_required
+def admin_dashboard():
+    db = get_db()
+    total_doctors = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
+    pending_requests_count = db.execute("SELECT COUNT(*) as c FROM users WHERE status = 'pending'").fetchone()["c"]
+    approved_doctors_count = db.execute("SELECT COUNT(*) as c FROM users WHERE status = 'approved'").fetchone()["c"]
+    total_scans = db.execute("SELECT COUNT(*) as c FROM predictions").fetchone()["c"]
+    total_anomalies = db.execute("SELECT COUNT(*) as c FROM predictions WHERE LOWER(result_class) != 'normal'").fetchone()["c"]
+    total_normal = db.execute("SELECT COUNT(*) as c FROM predictions WHERE LOWER(result_class) == 'normal'").fetchone()["c"]
+    total_tickets = db.execute("SELECT COUNT(*) as c FROM support_tickets").fetchone()["c"]
+
+    # Today's scan metrics
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_scans_total = db.execute("SELECT COUNT(*) as c FROM predictions WHERE created_at LIKE ?", (f"{today_str}%",)).fetchone()["c"]
+    today_admin_scans = db.execute("SELECT COUNT(*) as c FROM predictions WHERE (user_id = 0 OR user_id = 'admin') AND created_at LIKE ?", (f"{today_str}%",)).fetchone()["c"]
+    today_doctor_scans = db.execute("SELECT COUNT(*) as c FROM predictions WHERE (user_id != 0 AND user_id != 'admin') AND created_at LIKE ?", (f"{today_str}%",)).fetchone()["c"]
+
+    # All doctors with scan count, verification status and last scan timestamp
+    doctors = db.execute("""
+        SELECT u.id, u.name, u.email, u.phone, u.organisation, u.created_at, u.last_login, u.status, u.approved_at,
+               COUNT(p.id) as scan_count,
+               MAX(p.created_at) as last_scan_date
+        FROM users u
+        LEFT JOIN predictions p ON u.id = p.user_id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC
+    """).fetchall()
+
+    # Admin Scanned Patients (Scans uploaded directly by Admin)
+    admin_scans = db.execute("""
+        SELECT * FROM predictions
+        WHERE user_id = 0 OR user_id = 'admin'
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    # Recent doctor logins audit trail
+    recent_logins = db.execute("""
+        SELECT l.id, l.user_id, l.ip_address, l.user_agent, l.login_time,
+               u.name as doctor_name, u.email as doctor_email, u.organisation
+        FROM login_logs l
+        JOIN users u ON l.user_id = u.id
+        ORDER BY l.login_time DESC
+        LIMIT 25
+    """).fetchall()
+
+    # Recent scans across all users
+    recent_scans = db.execute("""
+        SELECT p.*,
+               CASE WHEN p.user_id = 0 OR p.user_id = 'admin' THEN 'Administrator' ELSE u.name END as doctor_name,
+               CASE WHEN p.user_id = 0 OR p.user_id = 'admin' THEN 'admin@fetalbrain.org' ELSE u.email END as doctor_email
+        FROM predictions p
+        LEFT JOIN users u ON p.user_id = u.id
+        ORDER BY p.created_at DESC
+        LIMIT 15
+    """).fetchall()
+
+    return render_template(
+        "admin.html",
+        total_doctors=total_doctors,
+        pending_requests_count=pending_requests_count,
+        approved_doctors_count=approved_doctors_count,
+        total_scans=total_scans,
+        total_anomalies=total_anomalies,
+        total_normal=total_normal,
+        total_tickets=total_tickets,
+        today_scans_total=today_scans_total,
+        today_admin_scans=today_admin_scans,
+        today_doctor_scans=today_doctor_scans,
+        doctors=doctors,
+        admin_scans=admin_scans,
+        recent_logins=recent_logins,
+        recent_scans=recent_scans
+    )
+
+
+@app.route("/admin/requests")
+@admin_required
+def admin_requests():
+    db = get_db()
+    pending_requests = db.execute("SELECT * FROM users WHERE status = 'pending' ORDER BY created_at DESC").fetchall()
+    all_requests = db.execute("SELECT * FROM users ORDER BY created_at DESC").fetchall()
+    pending_count = len(pending_requests)
+
+    return render_template(
+        "admin_requests.html",
+        pending_requests=pending_requests,
+        all_requests=all_requests,
+        pending_count=pending_count
+    )
+
+
+@app.route("/admin/request/<int:user_id>/approve", methods=["POST"])
+@admin_required
+def admin_approve_doctor(user_id):
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user:
+        flash("Doctor request not found.", "danger")
+        return redirect(url_for("admin_requests"))
+
+    now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db.execute("UPDATE users SET status = 'approved', approved_at = ? WHERE id = ?", (now_ts, user_id))
+    db.commit()
+
+    # Dispatch automated email notification
+    send_doctor_status_email(user["name"], user["email"], "approved", user["organisation"] if "organisation" in user.keys() else None)
+
+    flash(f"Doctor account for Dr. {user['name']} ({user['email']}) has been APPROVED! An automated notification email was dispatched.", "success")
+    return redirect(request.referrer or url_for("admin_requests"))
+
+
+@app.route("/admin/request/<int:user_id>/reject", methods=["POST"])
+@admin_required
+def admin_reject_doctor(user_id):
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user:
+        flash("Doctor request not found.", "danger")
+        return redirect(url_for("admin_requests"))
+
+    db.execute("UPDATE users SET status = 'rejected' WHERE id = ?", (user_id,))
+    db.commit()
+
+    # Dispatch automated email notification
+    send_doctor_status_email(user["name"], user["email"], "rejected", user["organisation"] if "organisation" in user.keys() else None)
+
+    flash(f"Doctor request for Dr. {user['name']} ({user['email']}) has been REJECTED. Notification dispatched.", "warning")
+    return redirect(request.referrer or url_for("admin_requests"))
+
+
+@app.route("/admin/system/hard-reset", methods=["POST"])
+@admin_required
+def admin_hard_reset():
+    db = get_db()
+    try:
+        # Delete all uploaded scan files
+        if os.path.exists(UPLOAD_DIR):
+            for filename in os.listdir(UPLOAD_DIR):
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                if os.path.isfile(file_path):
+                    try:
+                        os.remove(file_path)
+                    except Exception as err:
+                        print(f"Error removing file {file_path}: {err}")
+
+        # Wipe database tables
+        db.execute("DELETE FROM predictions")
+        db.execute("DELETE FROM login_logs")
+        db.execute("DELETE FROM support_tickets")
+        db.execute("DELETE FROM users")
+        try:
+            db.execute("DELETE FROM sqlite_sequence WHERE name IN ('predictions', 'login_logs', 'support_tickets', 'users')")
+        except sqlite3.OperationalError:
+            pass
+        db.commit()
+
+        flash("COMPLETE SYSTEM HARD RESET PERFORMED! All doctors, scan records, login logs, and uploaded ultrasound files have been permanently erased.", "warning")
+    except Exception as e:
+        flash(f"Error executing hard reset: {str(e)}", "danger")
+
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/doctor/<int:doctor_id>")
+@admin_required
+def admin_doctor_detail(doctor_id):
+    db = get_db()
+    doctor = db.execute("SELECT * FROM users WHERE id = ?", (doctor_id,)).fetchone()
+    if not doctor:
+        flash("Doctor record not found.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    predictions = db.execute(
+        "SELECT * FROM predictions WHERE user_id = ? ORDER BY created_at DESC",
+        (doctor_id,)
+    ).fetchall()
+
+    login_history = db.execute(
+        "SELECT * FROM login_logs WHERE user_id = ? ORDER BY login_time DESC LIMIT 100",
+        (doctor_id,)
+    ).fetchall()
+
+    anomaly_count = sum(1 for p in predictions if p["result_class"].lower() != "normal")
+
+    return render_template(
+        "admin_doctor_detail.html",
+        doctor=doctor,
+        predictions=predictions,
+        login_history=login_history,
+        anomaly_count=anomaly_count
+    )
+
+
+@app.route("/admin/doctor/<int:doctor_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_doctor(doctor_id):
+    db = get_db()
+    doctor = db.execute("SELECT * FROM users WHERE id = ?", (doctor_id,)).fetchone()
+    if not doctor:
+        flash("Doctor record not found.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    # Remove scan image files uploaded by this doctor
+    preds = db.execute("SELECT filename FROM predictions WHERE user_id = ?", (doctor_id,)).fetchall()
+    for p in preds:
+        if p["filename"]:
+            fpath = os.path.join(UPLOAD_DIR, p["filename"])
+            if os.path.exists(fpath):
+                try:
+                    os.remove(fpath)
+                except Exception as e:
+                    print(f"Error removing scan file {fpath}: {e}")
+
+    # Remove from database
+    db.execute("DELETE FROM predictions WHERE user_id = ?", (doctor_id,))
+    db.execute("DELETE FROM login_logs WHERE user_id = ?", (doctor_id,))
+    db.execute("DELETE FROM users WHERE id = ?", (doctor_id,))
+    db.commit()
+
+    flash(f"Doctor account 'Dr. {doctor['name']}' ({doctor['email']}) and all associated scan data were successfully deleted.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/prediction/<int:prediction_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_prediction(prediction_id):
+    db = get_db()
+    pred = db.execute("SELECT * FROM predictions WHERE id = ?", (prediction_id,)).fetchone()
+    if not pred:
+        flash("Scan record not found.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    if pred["filename"]:
+        fpath = os.path.join(UPLOAD_DIR, pred["filename"])
+        if os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+            except Exception:
+                pass
+
+    db.execute("DELETE FROM predictions WHERE id = ?", (prediction_id,))
+    db.commit()
+    flash("Scan record removed from system database.", "info")
+    return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+
+@app.route("/admin/export/doctors/csv")
+@admin_required
+def admin_export_doctors():
+    db = get_db()
+    doctors = db.execute("""
+        SELECT u.id, u.name, u.email, u.phone, u.organisation, u.created_at, u.last_login,
+               COUNT(p.id) as scan_count
+        FROM users u
+        LEFT JOIN predictions p ON u.id = p.user_id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC
+    """).fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Doctor Name", "Email", "Phone", "Organisation / Hospital", "Registered Date", "Last Login", "Total Scans"])
+    for d in doctors:
+        writer.writerow([
+            d["id"],
+            d["name"],
+            d["email"],
+            d["phone"],
+            d["organisation"] or "N/A",
+            d["created_at"],
+            d["last_login"] or "Never",
+            d["scan_count"]
+        ])
+
+    return Response(
+        "\ufeff" + output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=doctors_directory_report.csv"}
+    )
+
 
 
 def get_user_predictions():
@@ -903,12 +1466,13 @@ def predict():
         patient_message = request.form.get("patient_message", "").strip()
 
         db = get_db()
+        current_uid = 0 if (session.get("is_admin") or session.get("user_id") == "admin") else session["user_id"]
         db.execute(
             """INSERT INTO predictions
                (user_id, filename, original_name, result_class, confidence,
                 patient_name, patient_email, patient_phone, patient_message)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (session["user_id"], unique_name, file.filename, result_class, confidence,
+            (current_uid, unique_name, file.filename, result_class, confidence,
              patient_name, patient_email, patient_phone, patient_message)
         )
         db.commit()

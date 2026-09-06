@@ -1445,3 +1445,95 @@ hr {
     padding: 1.5rem 1rem;
   }
 }
+
+/* AUTH ROLE SWITCHER TABS & ADMIN STYLES */
+.nav-pills .nav-link {
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: all 0.25s ease;
+}
+
+.nav-pills .nav-link:hover {
+  color: var(--text-primary);
+  background: var(--accent-light);
+}
+
+.nav-pills .nav-link.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+#adminTabBtn.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.badge.bg-success-subtle {
+  background: rgba(52, 211, 153, 0.15) !important;
+  color: var(--success) !important;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.badge.bg-info-subtle {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: var(--info) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.badge.bg-secondary-subtle {
+  background: rgba(157, 196, 223, 0.12) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border);
+}
+
+.badge.bg-warning-subtle {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: var(--warning) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge.bg-danger-subtle {
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: var(--danger) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.modal-content {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-header, .modal-footer {
+  border-color: var(--border) !important;
+}
+
+/* LIGHT MODE CONTRAST OPTIMIZATIONS FOR TABLES & CARDS */
+html[data-theme="light"] .table {
+  color: var(--text-primary);
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: rgba(14, 126, 142, 0.05);
+}
+
+html[data-theme="light"] .table th {
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border);
+}
+
+html[data-theme="light"] .table td {
+  border-bottom: 1px solid var(--border);
+}
+
+html[data-theme="light"] .profile-header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.95));
+  border: 1px solid rgba(14, 126, 142, 0.2);
+}
+
+html[data-theme="light"] .card-header {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}

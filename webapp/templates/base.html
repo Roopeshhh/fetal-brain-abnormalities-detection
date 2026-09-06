@@ -38,25 +38,43 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('about') }}">About</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('contact') }}">Support</a>
-                    </li>
-                    {% if session.user_id %}
+                    {% if session.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin Portal</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin_requests') }}">Doctor Requests</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('analyze') }}">Scan Ultrasound</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                        </li>
+                        <li class="nav-item ms-lg-2">
+                            <span class="nav-link user-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff;">
+                                🛡️ Admin
+                            </span>
+                        </li>
+                    {% elif session.user_id %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('contact') }}">Support</a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('analyze') }}">Analyze</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                        </li>
                         <li class="nav-item ms-lg-2">
-                            <span class="nav-link user-badge">
-                                {{ session.name }}
-                            </span>
+                            <a href="{{ url_for('profile') }}" class="nav-link user-badge text-decoration-none" title="View Profile">
+                                Dr. {{ session.name }}
+                            </a>
                         </li>
                     {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('contact') }}">Support</a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('login') }}">Login</a>
                         </li>
