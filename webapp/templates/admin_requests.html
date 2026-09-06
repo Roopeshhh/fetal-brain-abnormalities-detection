@@ -63,7 +63,7 @@
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar-circle-sm bg-accent text-white" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem;">
-                                                {{ req['name'][0] | upper }}
+                                                {{ (req['name'] or 'D')[0] | upper }}
                                             </div>
                                             <span class="fw-bold">Dr. {{ req['name'] }}</span>
                                         </div>
@@ -94,8 +94,8 @@
                                                     ✓ Approve
                                                 </button>
                                             </form>
-                                            <form method="post" action="{{ url_for('admin_reject_doctor', user_id=req['id']) }}" style="display:inline;">
-                                                <button type="submit" class="btn btn-danger btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-1" title="Reject this doctor" onclick="return confirm('Reject registration for Dr. {{ req['name'] }}?');">
+                                            <form method="post" action="{{ url_for('admin_reject_doctor', user_id=req['id']) }}" style="display:inline;" onsubmit="return confirm('Reject this doctor registration request?');">
+                                                <button type="submit" class="btn btn-danger btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-1" title="Reject this doctor">
                                                     ✗ Reject
                                                 </button>
                                             </form>
@@ -167,13 +167,13 @@
                                                 </form>
                                             {% endif %}
                                             {% if r['status'] != 'rejected' %}
-                                                <form method="post" action="{{ url_for('admin_reject_doctor', user_id=r['id']) }}" style="display:inline;">
-                                                    <button type="submit" class="btn btn-outline-warning btn-sm py-0 px-2" title="Reject Doctor" onclick="return confirm('Revoke/Reject access for Dr. {{ r['name'] }}?');">
+                                                <form method="post" action="{{ url_for('admin_reject_doctor', user_id=r['id']) }}" style="display:inline;" onsubmit="return confirm('Revoke or reject access for this doctor?');">
+                                                    <button type="submit" class="btn btn-outline-warning btn-sm py-0 px-2" title="Reject Doctor">
                                                         Reject
                                                     </button>
                                                 </form>
                                             {% endif %}
-                                            <form method="post" action="{{ url_for('admin_delete_doctor', doctor_id=r['id']) }}" style="display:inline;" onsubmit="return confirm('Permanently delete Dr. {{ r['name'] }} and all associated data?');">
+                                            <form method="post" action="{{ url_for('admin_delete_doctor', doctor_id=r['id']) }}" style="display:inline;" onsubmit="return confirm('Permanently delete this doctor and all associated records?');">
                                                 <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="Delete account">
                                                     Delete
                                                 </button>

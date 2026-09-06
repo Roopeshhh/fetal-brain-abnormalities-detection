@@ -976,9 +976,11 @@ def get_user_predictions():
 
 def get_prediction_owned(prediction_id):
     db = get_db()
+    if session.get("is_admin"):
+        return db.execute("SELECT * FROM predictions WHERE id = ?", (prediction_id,)).fetchone()
     return db.execute(
         "SELECT * FROM predictions WHERE id = ? AND user_id = ?",
-        (prediction_id, session["user_id"])
+        (prediction_id, session.get("user_id"))
     ).fetchone()
 
 

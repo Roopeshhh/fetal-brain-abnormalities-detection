@@ -313,7 +313,11 @@
                                                 </form>
                                             {% endif %}
                                             <button type="button" class="btn btn-outline-danger btn-sm px-2 py-1"
-                                                    onclick="openDeleteDoctorModal('{{ d['id'] }}', '{{ d['name'] }}', '{{ d['email'] }}', '{{ d['scan_count'] }}')"
+                                                    data-doctor-id="{{ d['id'] }}"
+                                                    data-doctor-name="{{ d['name'] }}"
+                                                    data-doctor-email="{{ d['email'] }}"
+                                                    data-doctor-scans="{{ d['scan_count'] }}"
+                                                    onclick="handleDeleteDoctorClick(this)"
                                                     title="Delete doctor entry">
                                                 Delete Dr
                                             </button>
@@ -556,7 +560,12 @@ function filterDoctors() {
     }
 }
 
-function openDeleteDoctorModal(doctorId, doctorName, doctorEmail, scanCount) {
+function handleDeleteDoctorClick(btn) {
+    var doctorId = btn.getAttribute("data-doctor-id");
+    var doctorName = btn.getAttribute("data-doctor-name") || "Doctor";
+    var doctorEmail = btn.getAttribute("data-doctor-email") || "";
+    var scanCount = btn.getAttribute("data-doctor-scans") || "0";
+
     document.getElementById("modalDoctorName").innerText = "Dr. " + doctorName;
     document.getElementById("modalDoctorEmail").innerText = doctorEmail;
     document.getElementById("modalDoctorScans").innerText = scanCount;
