@@ -1537,3 +1537,94 @@ html[data-theme="light"] .card-header {
   border-bottom: 1px solid var(--border);
   color: var(--text-primary);
 }
+
+/* ==========================================================================
+   AUTH ROLE SELECTOR TABS (DOCTOR VS ADMIN)
+   ========================================================================== */
+.auth-role-tabs {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-strong) !important;
+  padding: 5px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  gap: 6px !important;
+}
+
+.auth-role-tabs .nav-item {
+  flex: 1 1 0;
+}
+
+.auth-role-tabs .nav-link {
+  width: 100%;
+  padding: 10px 14px !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  border-radius: 9px !important;
+  border: 1px solid transparent !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* Dark Theme - Inactive Tabs */
+html[data-theme="dark"] .auth-role-tabs .nav-link:not(.active) {
+  color: #d1e2f2 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .auth-role-tabs .nav-link:not(.active):hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(0, 194, 203, 0.3) !important;
+}
+
+/* Light Theme - Inactive Tabs */
+html[data-theme="light"] .auth-role-tabs .nav-link:not(.active) {
+  color: #1e293b !important;
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] .auth-role-tabs .nav-link:not(.active):hover {
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Active Doctor Tab */
+.auth-role-tabs .nav-link#doctorTabBtn.active {
+  background: linear-gradient(135deg, #00c2cb, #009ba3) !important;
+  color: #03252a !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(0, 194, 203, 0.4) !important;
+}
+
+html[data-theme="light"] .auth-role-tabs .nav-link#doctorTabBtn.active {
+  background: linear-gradient(135deg, #0e7e8e, #095c68) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 14px rgba(14, 126, 142, 0.35) !important;
+}
+
+/* Active Admin Tab */
+.auth-role-tabs .nav-link#adminTabBtn.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45) !important;
+}
+
+html[data-theme="light"] .auth-role-tabs .nav-link#adminTabBtn.active {
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35) !important;
+}
