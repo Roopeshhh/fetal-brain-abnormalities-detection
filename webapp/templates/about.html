@@ -2,10 +2,9 @@
 {% block content %}
 
 <div class="landing-hero">
-    <h1>About <span>FetalBrain AI</span></h1>
+    <h1>Clinical Engineering &middot; <span>System Architecture</span></h1>
     <p>
-        A deep learning system built to assist in detecting fetal brain abnormalities
-        from ultrasound images with state-of-the-art accuracy.
+        An Explainable Computer-Aided Diagnostic (CAD) platform combining hierarchical Vision Transformers with Digital Image Processing for automated fetal neuro-sonographic screening.
     </p>
 </div>
 
@@ -13,65 +12,19 @@
 <div class="row g-4 mb-5 justify-content-center">
     <div class="col-lg-8">
         <div class="feature-card grad-border reveal" data-spotlight data-tilt>
-            <h5>Our Mission</h5>
+            <h5>Project Objective &amp; Clinical Context</h5>
             <p>
-                Early and accurate detection of fetal brain conditions is critical for timely
-                intervention. FetalBrain AI applies a fine-tuned Swin Transformer vision model to
-                ultrasound scans, classifying them into 15 conditions with
-                <strong>98.70% validation accuracy</strong> — helping healthcare professionals
-                make faster, more confident decisions.
+                Congenital central nervous system (CNS) anomalies occur in approximately 1 to 2 per 1,000 live births and represent a major cause of pediatric morbidity. Traditional ultrasound screening relies heavily on sonographer expertise and image interpretation under challenging acoustic conditions. This system implements a fine-tuned Swin Transformer backbone to perform automated 15-class differential diagnosis, generating real-time Gradient-weighted Class Activation Maps (Grad-CAM) to validate anatomical focal regions and reduce diagnostic variability.
             </p>
         </div>
     </div>
 </div>
 
-<!-- KEY FEATURES -->
-<h3 class="section-title">What We Offer</h3>
-<p class="section-sub">Powerful, accessible and clinically relevant AI tools</p>
+<!-- KEY MODULES -->
+<h3 class="section-title">Core Diagnostic Modules</h3>
+<p class="section-sub">Integrated pipelines engineered for clinical ultrasound analysis</p>
 <div class="row g-4 mb-5">
     <div class="col-md-4">
-        <div class="feature-card grad-border reveal" data-spotlight data-tilt>
-            <div class="feature-icon">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-            </div>
-            <h5>Accurate Detection</h5>
-            <p>98.70% validation accuracy across 15 fetal brain conditions from a single ultrasound scan.</p>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="feature-card grad-border reveal" data-spotlight data-tilt>
-            <div class="feature-icon">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-            </div>
-            <h5>Fast Analysis</h5>
-            <p>Instant classification with confidence scores, straight from the uploaded ultrasound image.</p>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="feature-card grad-border reveal" data-spotlight data-tilt>
-            <div class="feature-icon">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-            </div>
-            <h5>Privacy Focused</h5>
-            <p>Uploads are processed securely and stored per user for review in the prediction history.</p>
-        </div>
-    </div>
-</div>
-
-<!-- TECHNOLOGY -->
-<h3 class="section-title">The Technology</h3>
-<p class="section-sub">Powered by a Swin Transformer vision backbone</p>
-<div class="row g-4 mb-5">
-    <div class="col-md-6">
         <div class="feature-card grad-border reveal" data-spotlight data-tilt>
             <div class="feature-icon">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -80,11 +33,50 @@
                     <path d="M2 12l10 5 10-5"/>
                 </svg>
             </div>
-            <h5>Swin Transformer</h5>
+            <h5>Swin Transformer Backbone</h5>
+            <p>Hierarchical shifted-window self-attention with linear computational complexity $O(M \times N)$ relative to image size, extracting multi-scale axial fetal brain features.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card grad-border reveal" data-spotlight data-tilt>
+            <div class="feature-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+            </div>
+            <h5>Explainable Grad-CAM</h5>
+            <p>Hooks into Stage-4 LayerNorm to backpropagate class-specific activation gradients, synthesizing a normalized Jet colormap highlighting suspicious anatomical ROIs.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card grad-border reveal" data-spotlight data-tilt>
+            <div class="feature-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+            </div>
+            <h5>Signal Quality &amp; DIP Metrics</h5>
+            <p>Performs chromatic divergence checks to reject non-ultrasound files and extracts acoustic features: Mean Echo Intensity, Contrast Variance, and Shannon Texture Entropy.</p>
+        </div>
+    </div>
+</div>
+
+<!-- TECHNICAL PIPELINE -->
+<h3 class="section-title">End-to-End Processing Pipeline</h3>
+<p class="section-sub">From raw B-mode ultrasound ingestion to formal medical report</p>
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <div class="feature-card grad-border reveal" data-spotlight data-tilt>
+            <div class="feature-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+            </div>
+            <h5>Dual-Scan Visual Workspace</h5>
             <p>
-                A state-of-the-art vision transformer with a hierarchical feature pyramid and
-                shifted windows, fine-tuned on fetal brain ultrasound data for precise
-                multi-class classification.
+                Renders a synchronized vertical inspection stack displaying the original B-mode axial ultrasound scan aligned directly above the Stage-4 Grad-CAM activation heatmap for rapid cross-referencing.
             </p>
         </div>
     </div>
@@ -92,23 +84,21 @@
         <div class="feature-card grad-border reveal" data-spotlight data-tilt>
             <div class="feature-icon">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="20" x2="12" y2="10"/>
-                    <line x1="18" y1="20" x2="18" y2="4"/>
-                    <line x1="6" y1="20" x2="6" y2="16"/>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
                 </svg>
             </div>
-            <h5>15-Class Model</h5>
+            <h5>Clinical Diagnostic PDF Reports</h5>
             <p>
-                Trained to distinguish 14 abnormality types from normal cases, with per-class
-                confidence scoring returned for every prediction.
+                ReportLab-driven automated PDF generation embedding patient demographics, primary diagnosis, ranked Top-5 probabilities, DIP metrics, and side-by-side scan visualizations.
             </p>
         </div>
     </div>
 </div>
 
 <!-- CONDITIONS -->
-<h3 class="section-title">Detectable Conditions</h3>
-<p class="section-sub">The model can identify these 15 fetal brain conditions from ultrasound scans</p>
+<h3 class="section-title">Detectable Fetal Brain Conditions</h3>
+<p class="section-sub">Trained across 14 congenital abnormalities plus normal controls</p>
 <div class="row g-2 mb-5">
     {% set conditions = [
         "Arnold Chiari Malformation", "Arachnoid Cyst", "Cerebellar Hypoplasia",
@@ -125,7 +115,11 @@
 </div>
 
 <div class="text-center mb-4">
-    <a href="{{ url_for('register') }}" class="btn btn-accent btn-lg px-5">Get Started</a>
+    {% if session.user_id %}
+    <a href="{{ url_for('analyze') }}" class="btn btn-accent btn-lg px-5">Open Diagnostic Studio</a>
+    {% else %}
+    <a href="{{ url_for('login') }}" class="btn btn-accent btn-lg px-5">Doctor Login</a>
+    {% endif %}
 </div>
 
 {% endblock %}

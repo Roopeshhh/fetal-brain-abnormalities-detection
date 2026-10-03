@@ -792,6 +792,14 @@ html[data-theme="dark"] .accordion-button::after {
   border: 2px dashed var(--border-strong);
   transition: all 0.3s;
   padding: 1.5rem;
+  width: 100%;
+}
+
+.upload-area.has-results {
+  display: block !important;
+  border-style: solid;
+  border-color: rgba(14, 165, 233, 0.3);
+  padding: 1rem;
 }
 
 .upload-area:hover {
@@ -817,6 +825,113 @@ html[data-theme="dark"] .accordion-button::after {
   object-fit: contain;
   width: 100%;
   box-shadow: var(--glow);
+}
+
+.scan-stack-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.scan-view-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  width: 100%;
+}
+
+.scan-view-card:hover {
+  border-color: var(--accent);
+}
+
+.scan-view-card.active-cam-card {
+  border-color: rgba(14, 165, 233, 0.5);
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.12);
+}
+
+.scan-display-frame {
+  height: 270px;
+  background: #020617;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.scan-display-frame img {
+  max-height: 260px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* SIGNAL METRICS ROW */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metric-pill {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+}
+
+.metric-pill .metric-val {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.metric-pill .metric-lbl {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* TOP-5 PROBABILITY DISTRIBUTION LIST */
+.prob-dist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prob-dist-item {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.prob-dist-item .prob-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.prob-dist-item .prob-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
 }
 
 /* FORMS */
@@ -1627,4 +1742,133 @@ html[data-theme="light"] .auth-role-tabs .nav-link#adminTabBtn.active {
   font-weight: 800 !important;
   border: 1px solid rgba(0, 0, 0, 0.15) !important;
   box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35) !important;
+}
+
+/* ==========================================================================
+   DUAL SCAN DIAGNOSTIC WORKSTATION (VERTICAL STACK & DIP METRICS)
+   ========================================================================== */
+.scan-stack-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.scan-view-card {
+  background: var(--card-bg, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem;
+  transition: all 0.25s ease;
+}
+
+.scan-view-card:hover {
+  border-color: var(--accent-soft, rgba(0, 194, 203, 0.4));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.scan-view-card.active-cam-card {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.04) 0%, rgba(15, 23, 42, 0.7) 100%);
+}
+
+.scan-display-frame {
+  width: 100%;
+  height: 290px;
+  min-height: 250px;
+  max-height: 340px;
+  background: #000000;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6);
+}
+
+.scan-display-frame img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* METRICS GRID */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 576px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metric-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  text-align: center;
+  transition: border-color 0.2s ease;
+}
+
+.metric-pill:hover {
+  border-color: var(--accent);
+}
+
+.metric-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent, #38bdf8);
+  line-height: 1.2;
+}
+
+.metric-lbl {
+  font-size: 0.68rem;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* TOP-5 PROBABILITY DISTRIBUTION */
+.prob-dist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prob-dist-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+}
+
+.prob-bar {
+  height: 4px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.prob-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.prob-dist-item:first-child .prob-bar-fill {
+  background: linear-gradient(90deg, #00c2cb, #38bdf8);
 }

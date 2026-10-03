@@ -11,36 +11,194 @@
 </div>
 
 <div class="row g-4">
+    <!-- LEFT PANEL: DUAL SCAN WORKSTATION (VERTICAL STACK) -->
     <div class="col-lg-7">
         <div class="upload-card h-100 reveal">
             <div class="card-body p-4">
-                <div class="upload-area grad-border text-center" id="uploadArea">
-                    {% if image_file %}
-                        <img src="{{ url_for('static', filename='uploads/' + image_file) }}"
-                             class="img-fluid preview-img" alt="Ultrasound">
-                    {% else %}
-                        <div id="placeholder">
-                            <div class="mb-3">
-                                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.5">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="17 8 12 3 7 8"/>
-                                    <line x1="12" y1="3" x2="12" y2="15"/>
-                                </svg>
-                            </div>
-                            <p class="upload-text">Upload Ultrasound Image</p>
-                            <p class="upload-hint">JPG, JPEG, PNG or BMP</p>
+                {% if image_file and heatmap_file %}
+                    <div class="upload-area grad-border has-results" id="uploadArea">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 text-uppercase small" style="color: var(--text-primary); letter-spacing: 0.8px;">
+                                🩺 Dual Scan Diagnostic View
+                            </h6>
+                            <span class="badge bg-accent" style="font-size: 0.72rem;">Swin-Tiny XAI</span>
                         </div>
-                    {% endif %}
-                </div>
+
+                        <div class="scan-stack-container">
+                            <!-- SCAN 1 (TOP): ORIGINAL ULTRASOUND -->
+                            <div class="scan-view-card">
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                    <span class="badge bg-secondary-subtle text-muted" style="font-size: 0.75rem;">1. Original Ultrasound Scan</span>
+                                    <span class="badge bg-dark text-muted border" style="font-size: 0.7rem;">B-Mode Axial Plane</span>
+                                </div>
+                                <div class="scan-display-frame">
+                                    <img src="{{ url_for('static', filename='uploads/' + image_file) }}"
+                                         alt="Original Fetal Ultrasound Scan">
+                                </div>
+                            </div>
+
+                            <!-- SCAN 2 (BOTTOM): GRAD-CAM ATTENTION MAP -->
+                            <div class="scan-view-card active-cam-card">
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                    <span class="badge bg-accent" style="font-size: 0.75rem;">2. Grad-CAM Spatial Activation Map</span>
+                                    <span class="badge bg-dark text-info border" style="font-size: 0.7rem;">Stage-4 LayerNorm Focus</span>
+                                </div>
+                                <div class="scan-display-frame">
+                                    <img src="{{ url_for('static', filename='uploads/' + heatmap_file) }}"
+                                         alt="Grad-CAM Activation Heatmap">
+                                </div>
+                            </div>
+
+                            <!-- SIGNAL METRICS EXTRACTED FROM SCAN -->
+                            {% if metrics %}
+                            <div class="scan-view-card p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                        📊 Acoustic Signal & Texture Metrics
+                                    </span>
+                                    <span class="badge bg-dark text-muted border" style="font-size: 0.68rem;">DIP Analysis</span>
+                                </div>
+                                <div class="metrics-grid">
+                                    <div class="metric-pill">
+                                        <div class="metric-val">{{ metrics.mean_intensity }}</div>
+                                        <div class="metric-lbl">Mean Echo</div>
+                                    </div>
+                                    <div class="metric-pill">
+                                        <div class="metric-val">{{ metrics.contrast_std }}</div>
+                                        <div class="metric-lbl">Contrast (Std)</div>
+                                    </div>
+                                    <div class="metric-pill">
+                                        <div class="metric-val">{{ metrics.entropy }} <span style="font-size:0.7rem;">bits</span></div>
+                                        <div class="metric-lbl">Spatial Entropy</div>
+                                    </div>
+                                    <div class="metric-pill">
+                                        <div class="metric-val">{{ metrics.roi_coverage }}%</div>
+                                        <div class="metric-lbl">Attention ROI</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- EXPLAINABLE AI NOTE -->
+                            <div class="text-start small p-3 rounded" style="background: rgba(14, 165, 233, 0.08); border-left: 3px solid var(--accent); color: var(--text-secondary);">
+                                <div class="d-flex align-items-start gap-2">
+                                    <span style="font-size: 1.15rem; line-height: 1.2;">💡</span>
+                                    <div>
+                                        <strong style="color: var(--text-primary);">Explainable AI (XAI) Insight:</strong>
+                                        The thermal gradient (yellow/red hotspots) reveals the anatomical neurosonographic structures prioritized by the Swin Transformer model to identify <strong style="color: var(--accent);">{{ prediction }}</strong>.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="upload-area grad-border text-center p-4" id="uploadArea">
+                        {% if image_file %}
+                            <img src="{{ url_for('static', filename='uploads/' + image_file) }}"
+                                 class="img-fluid preview-img" alt="Ultrasound">
+                        {% else %}
+                            <div id="placeholder">
+                                <div class="mb-3">
+                                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.5">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                </div>
+                                <p class="upload-text">Upload Ultrasound Image</p>
+                                <p class="upload-hint">JPG, JPEG, PNG or BMP (B-Mode Ultrasound)</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
+
+    <!-- RIGHT PANEL: DIAGNOSTIC REPORT & PROBABILITY DISTRIBUTION -->
     <div class="col-lg-5">
         <div class="upload-card h-100 reveal">
             <div class="card-body p-4 d-flex flex-column justify-content-between">
                 <div>
+                    {% if prediction %}
+                        <!-- PRIMARY RESULT CARD -->
+                        <div class="result-section mb-3 p-3 rounded" id="resultSection" style="background: var(--glass-bg-strong); border: 1px solid var(--border);">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <p class="result-label mb-0">Primary Diagnostic Finding</p>
+                                <span class="badge bg-accent" style="font-size: 0.72rem;">Swin-Tiny + Grad-CAM</span>
+                            </div>
+                            <h3 class="result-class mb-2" style="font-size: 1.4rem; color: {% if prediction | lower == 'normal' %}var(--success, #22c55e){% else %}var(--accent, #38bdf8){% endif %};">
+                                {{ prediction }}
+                            </h3>
+                            <div class="mt-2 mb-3">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted">Model Confidence</span>
+                                    <span class="fw-bold">{{ confidence }}%</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar"
+                                         style="width: {{ confidence }}%; background: linear-gradient(90deg, var(--accent), var(--accent-2));"></div>
+                                </div>
+                            </div>
+
+                            <!-- TOP-5 PROBABILITY DISTRIBUTION LIST -->
+                            {% if top_predictions %}
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                        Multi-Class Probability Distribution
+                                    </span>
+                                    <span class="badge bg-dark text-muted border" style="font-size: 0.68rem;">Top 5 Logits</span>
+                                </div>
+                                <div class="prob-dist-list">
+                                    {% for tp in top_predictions %}
+                                    <div class="prob-dist-item">
+                                        <div class="d-flex justify-content-between small">
+                                            <span class="fw-semibold {% if loop.first %}text-info{% else %}text-secondary{% endif %}">
+                                                {{ loop.index }}. {{ tp.class }}
+                                            </span>
+                                            <span class="fw-bold font-monospace {% if loop.first %}text-info{% else %}text-muted{% endif %}">
+                                                {{ tp.prob }}%
+                                            </span>
+                                        </div>
+                                        <div class="prob-bar">
+                                            <div class="prob-bar-fill" style="width: {{ tp.prob }}%;"></div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- ACTION BUTTONS -->
+                            <div class="d-flex gap-2 flex-wrap">
+                                {% if prediction_id %}
+                                    <a href="{{ url_for('export_single_pdf', prediction_id=prediction_id) }}" class="btn btn-accent flex-fill text-center btn-sm py-2" target="_blank">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1" style="vertical-align:-2px;">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                            <line x1="12" y1="18" x2="12" y2="12"/>
+                                            <line x1="9" y1="15" x2="15" y2="15"/>
+                                        </svg>
+                                        Download PDF Report
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('analyze') }}" class="btn btn-outline-accent flex-fill text-center btn-sm py-2" id="clearResultBtn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1" style="vertical-align:-2px;">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    New Scan
+                                </a>
+                                <a href="{{ url_for('profile') }}" class="btn btn-outline-accent flex-fill text-center btn-sm py-2">
+                                    History
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- PATIENT DEMOGRAPHICS FORM -->
                     <h6 class="text-muted text-uppercase small mb-3" style="letter-spacing:1px;font-weight:600;">
-                        Patient Details
+                        {% if prediction %}Patient Information{% else %}Patient Details{% endif %}
                     </h6>
                     <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data" id="uploadForm">
                         <div class="row g-3">
@@ -65,47 +223,20 @@
                                        accept=".jpg,.jpeg,.png,.bmp" required>
                             </div>
                             <div class="col-12">
-                                <label for="patientMessage" class="form-label">Message / Notes</label>
+                                <label for="patientMessage" class="form-label">Clinical Notes</label>
                                 <textarea class="form-control" id="patientMessage" name="patient_message"
-                                          rows="2" placeholder="Any additional notes about the patient"></textarea>
+                                          rows="2" placeholder="e.g. 22-week routine anomaly screening scan"></textarea>
                             </div>
                         </div>
                         <div class="split-predict-container btn-accent w-100 mt-3" id="predictBtnContainer">
                             <div class="split-btn-label">
-                                <span id="btnText">Analyze Image</span>
+                                <span id="btnText">Analyze Ultrasound Scan</span>
                                 <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
                             </div>
                             <button type="button" class="split-btn-half split-btn-left" id="predictBtnLeft" aria-label="Analyze Image (Left Half)"></button>
                             <button type="button" class="split-btn-half split-btn-right" id="predictBtnRight" aria-label="Analyze Image (Right Half)"></button>
                         </div>
                     </form>
-                    {% if prediction %}
-                        <div class="result-section mt-4" id="resultSection">
-                            <p class="result-label">Detection Result</p>
-                            <h3 class="result-class">{{ prediction }}</h3>
-                            <div class="mt-3">
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span>Confidence</span>
-                                    <span>{{ confidence }}%</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar"
-                                         style="width: {{ confidence }}%"></div>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2 mt-3 flex-wrap">
-                                <a href="{{ url_for('analyze') }}" class="btn btn-accent flex-fill text-center" id="clearResultBtn">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1" style="vertical-align:-2px;">
-                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                    </svg>
-                                    Clear Result & New Scan
-                                </a>
-                                <a href="{{ url_for('profile') }}" class="btn btn-outline-accent flex-fill text-center">
-                                    View History
-                                </a>
-                            </div>
-                        </div>
-                    {% endif %}
                 </div>
             </div>
         </div>

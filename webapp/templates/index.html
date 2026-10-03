@@ -4,23 +4,22 @@
 <div class="hero-split">
   <div class="hero-content">
     <span class="hero-badge reveal"
-      >Deep Learning &middot; Medical Imaging</span
+      >Swin Vision Transformer &middot; Fetal Neuro-Sonography</span
     >
-    <h1>AI-Powered <span>Fetal Brain</span> Abnormality Detection</h1>
+    <h1>Fetal Brain <span>Abnormality Detection</span> &amp; Classification Platform</h1>
     <p>
-      A deep learning system that classifies fetal brain ultrasound images into
-      15 conditions using a model with
-      <strong>98.70% validation accuracy</strong>.
+      An advanced clinical decision support workstation powered by a hierarchical Swin Transformer backbone, classifying fetal neuro-sonographic B-mode scans across 15 anatomical conditions with
+      <strong>98.70% validation accuracy</strong> and real-time Explainable AI (Grad-CAM) localization.
     </p>
     <div class="hero-actions">
       {% if session.user_id %}
       <a href="{{ url_for('analyze') }}" class="btn btn-accent btn-lg px-4"
-        >Start Analyzing</a
+        >Open Diagnostic Studio</a
       >
       <a
         href="{{ url_for('profile') }}"
         class="btn btn-outline-accent btn-lg px-4"
-        >My Profile</a
+        >Clinical Archive</a
       >
       {% else %}
       <a href="{{ url_for('register') }}" class="btn btn-accent btn-lg px-4"
@@ -29,7 +28,7 @@
       <a
         href="{{ url_for('login') }}"
         class="btn btn-outline-accent btn-lg px-4"
-        >Login</a
+        >Doctor Login</a
       >
       {% endif %}
     </div>
@@ -58,9 +57,9 @@
           <path d="M9 12h6M12 9v6" />
         </svg>
       </div>
-      <span class="scan-tag tag-1">98.70% Accurate</span>
+      <span class="scan-tag tag-1">98.70% Accuracy</span>
       <span class="scan-tag tag-2">15 Conditions</span>
-      <span class="scan-tag tag-3">Real-Time AI</span>
+      <span class="scan-tag tag-3">Grad-CAM XAI</span>
     </div>
   </div>
 </div>
@@ -166,9 +165,9 @@
 </div>
 
 <!-- WHY CHOOSE US -->
-<h3 class="section-title">Why Choose FetalBrain AI</h3>
+<h3 class="section-title">Clinical Diagnostic Architecture</h3>
 <p class="section-sub">
-  Built for speed, accuracy and trust in clinical workflows
+  Engineered for precision, explainability, and seamless integration into sonography workflows
 </p>
 <div class="row g-4 mb-5">
   <div class="col-md-4">
@@ -186,10 +185,9 @@
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
       </div>
-      <h5>High Accuracy</h5>
+      <h5>High Diagnostic Sensitivity</h5>
       <p>
-        98.70% validation accuracy from a fine-tuned Swin Transformer model
-        trained on real ultrasound data.
+        98.70% validation accuracy powered by hierarchical shifted-window attention mechanisms trained on clinical B-mode fetal brain ultrasound data.
       </p>
     </div>
   </div>
@@ -207,10 +205,9 @@
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
         </svg>
       </div>
-      <h5>Instant Results</h5>
+      <h5>Explainable AI (Grad-CAM)</h5>
       <p>
-        Get classification and confidence scores in seconds — no waiting, no
-        complex setup.
+        Calculates gradient-weighted class activation maps at Stage-4 LayerNorm to highlight anatomical regions of interest directly on the ultrasound plane.
       </p>
     </div>
   </div>
@@ -229,10 +226,9 @@
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </div>
-      <h5>Privacy-First</h5>
+      <h5>Secure Clinical Records</h5>
       <p>
-        Uploads and patient details are stored securely per account and visible
-        only to the owner.
+        Role-based access control protecting patient demographics, scan archives, and auto-generated diagnostic PDF reports.
       </p>
     </div>
   </div>
@@ -252,10 +248,9 @@
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       </div>
-      <h5>Easy to Use</h5>
+      <h5>Signal Quality Validation</h5>
       <p>
-        A clean three-step flow: upload the scan, run the analysis, and review
-        the result.
+        Automated chromatic divergence and contrast verification to ensure scan integrity before neural inference.
       </p>
     </div>
   </div>
@@ -273,10 +268,9 @@
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
       </div>
-      <h5>History Tracking</h5>
+      <h5>DIP Feature Extraction</h5>
       <p>
-        Every scan is saved to your profile so results can be reviewed, compared
-        and shared.
+        Computes Shannon texture entropy, mean echo intensity, spatial contrast variance, and attention ROI percentage.
       </p>
     </div>
   </div>
@@ -296,10 +290,9 @@
           />
         </svg>
       </div>
-      <h5>Clinically Relevant</h5>
+      <h5>Multi-Class Differential</h5>
       <p>
-        Detects 14 abnormality types plus normal cases, supporting screening and
-        triage workflows.
+        Evaluates 15 distinct neurological categories, outputting ranked Top-5 probability distributions for secondary triage.
       </p>
     </div>
   </div>
