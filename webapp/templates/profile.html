@@ -86,7 +86,7 @@
                                     <th>AI Detection Result</th>
                                     <th>Confidence</th>
                                     <th>Scan Date</th>
-                                    <th class="text-end pe-4" style="width: 170px;">Download</th>
+                                    <th class="text-end pe-4" style="width: 220px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,8 +116,12 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="d-inline-flex gap-1">
+                                            <a href="{{ url_for('prediction_trace', prediction_id=p['id']) }}"
+                                               class="btn btn-outline-info btn-sm px-2 py-1" title="Inspect 8-Panel Developer Trace">
+                                                Trace
+                                            </a>
                                             <a href="{{ url_for('export_single_csv', prediction_id=p['id']) }}"
-                                               class="btn btn-outline-accent btn-sm px-2 py-1" title="Download CSV report">
+                                               class="btn btn-outline-secondary btn-sm px-2 py-1" title="Download CSV report">
                                                 CSV
                                             </a>
                                             <a href="{{ url_for('export_single_pdf', prediction_id=p['id']) }}"

@@ -114,6 +114,10 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="d-inline-flex gap-1">
+                                            <a href="{{ url_for('prediction_trace', prediction_id=p['id']) }}"
+                                               class="btn btn-outline-info btn-sm px-2 py-1" title="Inspect Developer Trace">
+                                                Trace
+                                            </a>
                                             <a href="{{ url_for('export_single_pdf', prediction_id=p['id']) }}"
                                                class="btn btn-accent btn-sm px-2 py-1" title="Download Report PDF">
                                                 PDF

@@ -38,6 +38,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('about') }}">About</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('evaluation') }}">Evaluation</a>
+                    </li>
                     {% if session.is_admin %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin Portal</a>
@@ -127,7 +130,7 @@
                     <p class="mb-0">&copy; 2026 FetalBrain AI Detection System</p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
-                    <p class="mb-0">Model &middot; Accuracy: 98.70%</p>
+                    <p class="mb-0">Architecture: Swin-Tiny &middot; <a href="{{ url_for('evaluation') }}" class="text-decoration-none" style="color: var(--accent);">Evaluation Benchmark</a></p>
                 </div>
             </div>
         </div>

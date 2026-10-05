@@ -15,3 +15,5 @@ static/uploads/
 Thumbs.db
 datasets/
 webapp/static/uploads/
+webapp/static/traces/*
+!webapp/static/traces/.gitkeep

@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- EVALUATION HEADER -->
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <span class="hero-badge mb-2">Clinical AI Benchmark</span>
+        <h2 class="fw-bold mb-1" style="color: var(--text-primary); letter-spacing: -0.5px;">
+            📊 Model Performance Evaluation & Dataset Audit
+        </h2>
+        <p class="text-muted small mb-0">
+            Multi-class benchmark, patient cohort analysis, confusion matrix, sensitivity metrics, and calibration curve for Swin-Tiny.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="{{ url_for('analyze') }}" class="btn btn-accent btn-sm px-3 py-2">
+            + New Diagnostic Scan
+        </a>
+        <a href="{{ url_for('profile') }}" class="btn btn-outline-accent btn-sm px-3 py-2">
+            View Scan History
+        </a>
+    </div>
+</div>
+
+<!-- AUDIT SCOPE NOTE -->
+<div class="alert alert-info py-3 px-4 mb-4 rounded-3 d-flex align-items-start gap-3" style="background: rgba(14, 165, 233, 0.08); border-left: 4px solid var(--accent);">
+    <span style="font-size: 1.3rem; line-height: 1;">💡</span>
+    <div>
+        <strong style="color: var(--text-primary);">Developer Trace vs Evaluation Report:</strong>
+        <p class="small mb-0 text-muted mt-1" style="line-height: 1.5;">
+            The <strong>Developer Trace</strong> proves the exact mathematical and intermediate tensor steps for an <em>individual scan</em>. This <strong>Evaluation Report</strong> audits aggregate performance, data split methodology, and generalizability across the <em>entire 1,916-image research dataset</em>.
+        </p>
+    </div>
+</div>
+
+<!-- TOP KPI SUMMARY ROW -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card grad-border h-100 p-3" style="background: var(--glass-bg-strong);">
+            <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Reported Checkpoint Acc.</small>
+            <div class="fs-4 fw-bold font-monospace text-info mt-1">98.70%</div>
+            <small class="text-muted" style="font-size: 0.72rem;">Scalar saved in <code>.pth</code> (379/384)</small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card grad-border h-100 p-3" style="background: var(--glass-bg-strong);">
+            <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Total Research Dataset</small>
+            <div class="fs-4 fw-bold font-monospace text-primary mt-1">{{ eval_data.dataset_summary.total_images }} Scans</div>
+            <small class="text-muted" style="font-size: 0.72rem;">Across 15 Anatomical Classes</small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card grad-border h-100 p-3" style="background: var(--glass-bg-strong);">
+            <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Unique Patient Cohort</small>
+            <div class="fs-4 fw-bold font-monospace text-warning mt-1">{{ eval_data.dataset_summary.unique_patients }} Patients</div>
+            <small class="text-muted" style="font-size: 0.72rem;">Multi-slice / augmented series</small>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card grad-border h-100 p-3" style="background: var(--glass-bg-strong);">
+            <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Normal vs Anomaly Sensitivity</small>
+            <div class="fs-4 fw-bold font-monospace text-success mt-1">{{ eval_data.binary_metrics.sensitivity }}%</div>
+            <small class="text-muted" style="font-size: 0.72rem;">Structural Abnormality Detection</small>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- METHODOLOGY RECONCILIATION & CRITIQUE CARD -->
+<!-- ========================================== -->
+<div class="card grad-border mb-4 reveal">
+    <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill bg-warning text-dark px-2 py-1 fw-bold">Audit</span>
+            <h5 class="mb-0 fw-bold">Methodological Reconciliation & Research Critique</h5>
+        </div>
+        <span class="badge bg-dark text-muted border small">Essential Context for Seminar Presentation</span>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="p-3 rounded h-100" style="background: var(--glass-bg); border: 1px solid var(--border);">
+                    <h6 class="fw-bold small text-uppercase mb-2 text-warning">
+                        1. Checkpoint 98.70% Accuracy Reconciliation
+                    </h6>
+                    <p class="small text-muted mb-0" style="line-height: 1.5;">
+                        {{ eval_data.methodology_critique.checkpoint_scalar_reconciliation }}
+                        Specifically, an 80/20 train/validation split yields a validation denominator of $384$ images ($12 \text{ batches} \times 32$), producing $379/384 = 98.6979\%$.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 rounded h-100" style="background: var(--glass-bg); border: 1px solid var(--border);">
+                    <h6 class="fw-bold small text-uppercase mb-2 text-warning">
+                        2. Patient-Level Holdout vs Random Image Split
+                    </h6>
+                    <p class="small text-muted mb-0" style="line-height: 1.5;">
+                        {{ eval_data.methodology_critique.data_leakage_risk }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 rounded h-100" style="background: var(--glass-bg); border: 1px solid var(--border);">
+                    <h6 class="fw-bold small text-uppercase mb-2 text-danger">
+                        3. Training Notebook Transform Override Finding
+                    </h6>
+                    <p class="small text-muted mb-0" style="line-height: 1.5;">
+                        {{ eval_data.methodology_critique.transform_override_bug }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 rounded h-100" style="background: rgba(14, 165, 233, 0.08); border-left: 3px solid var(--accent);">
+                    <h6 class="fw-bold small text-uppercase mb-2 text-info">
+                        4. Translational Recommendation
+                    </h6>
+                    <p class="small text-muted mb-0" style="line-height: 1.5;">
+                        {{ eval_data.methodology_critique.recommendation }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- DATASET CLASS DISTRIBUTION CHART & TABLE   -->
+<!-- ========================================== -->
+<div class="card grad-border mb-4 reveal">
+    <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">15-Class Dataset Distribution & Imbalance Audit</h5>
+        <span class="badge bg-accent small">Total: 1,916 Images</span>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle small mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Class Category</th>
+                                <th style="width: 35%;">Volume Distribution</th>
+                                <th class="text-end">Images</th>
+                                <th class="text-end">Share %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in eval_data.per_class_metrics %}
+                            <tr>
+                                <td class="font-monospace text-muted">{{ loop.index }}</td>
+                                <td class="fw-semibold {% if m.class_key == 'normal' %}text-success{% endif %}">
+                                    {{ m.class_name }}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar {% if m.class_key == 'normal' %}bg-success{% else %}bg-info{% endif %}"
+                                             style="width: {{ (m.total_dataset_count / 19.16) | round(1) }}%;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-end font-monospace fw-bold">{{ m.total_dataset_count }}</td>
+                                <td class="text-end font-monospace text-muted">{{ (m.total_dataset_count / 19.16) | round(1) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="p-3 rounded h-100 d-flex flex-column justify-content-between" style="background: var(--glass-bg); border: 1px solid var(--border);">
+                    <div>
+                        <h6 class="fw-bold small text-uppercase mb-2 text-muted">Distribution Insights</h6>
+                        <ul class="list-unstyled small text-muted mb-3" style="line-height: 1.6;">
+                            <li>• <strong>Dominant Classes:</strong> Mild Ventriculomegaly (229), Moderate Ventriculomegaly (227), Normal (216), Encephalocele (133).</li>
+                            <li>• <strong>Uniform Classes:</strong> Remaining 11 anomaly classes have 100 images each.</li>
+                            <li>• <strong>Normal vs Abnormal Ratio:</strong> Normal scans represent <strong>11.3%</strong> (216/1,916) while abnormal scans comprise <strong>88.7%</strong> (1,700/1,916).</li>
+                        </ul>
+                    </div>
+                    <div class="p-2 rounded text-center small text-info" style="background: rgba(14, 165, 233, 0.1);">
+                        Focal Loss ($\gamma=2$) is deployed during training to dynamically reweight harder and rarer anomaly instances.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 15x15 CONFUSION MATRIX                     -->
+<!-- ========================================== -->
+<div class="card grad-border mb-4 reveal">
+    <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">15 × 15 Categorical Confusion Matrix</h5>
+        <span class="badge bg-dark text-info border small">Held-out Evaluation Sample</span>
+    </div>
+    <div class="card-body p-4">
+        <p class="small text-muted mb-3">
+            Rows represent Ground Truth categories; Columns represent Swin-Tiny predicted categories. Diagonal elements denote True Positives.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered text-center align-middle font-monospace small mb-0" style="font-size: 0.68rem;">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 140px;" class="text-start">True \ Pred</th>
+                        {% for c in eval_data.classes %}
+                            <th title="{{ c }}">{{ loop.index }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in eval_data.confusion_matrix %}
+                    {% set r_idx = loop.index0 %}
+                    <tr>
+                        <th class="text-start bg-body-tertiary text-truncate" style="max-width: 140px;" title="{{ eval_data.classes[r_idx] }}">
+                            {{ r_idx + 1 }}. {{ eval_data.classes[r_idx] }}
+                        </th>
+                        {% for val in row %}
+                            {% set c_idx = loop.index0 %}
+                            <td style="background: {% if r_idx == c_idx and val > 0 %}rgba(0, 194, 203, 0.45){% elif val > 0 %}rgba(248, 113, 113, 0.35){% else %}transparent{% endif %}; font-weight: {% if val > 0 %}bold{% else %}normal{% endif %};">
+                                {{ val }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PER-CLASS METRICS TABLE (P, R, F1, SPEC)   -->
+<!-- ========================================== -->
+<div class="card grad-border mb-4 reveal">
+    <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Per-Class Diagnostic Performance Metrics</h5>
+        <span class="badge bg-accent small">Macro F1: {{ eval_data.macro_metrics.macro_f1 }}%</span>
+    </div>
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle small mb-0 font-monospace">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th class="text-start">Class Name</th>
+                        <th class="text-end">Precision (PPV)</th>
+                        <th class="text-end">Recall (Sens.)</th>
+                        <th class="text-end">Specificity</th>
+                        <th class="text-end">F1-Score</th>
+                        <th class="text-end">Sample Support</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in eval_data.per_class_metrics %}
+                    <tr class="{% if m.class_key == 'normal' %}table-success fw-bold{% endif %}">
+                        <td class="text-muted">{{ loop.index }}</td>
+                        <td class="text-start fw-semibold">{{ m.class_name }}</td>
+                        <td class="text-end">{{ m.precision }}%</td>
+                        <td class="text-end">{{ m.recall }}%</td>
+                        <td class="text-end">{{ m.specificity }}%</td>
+                        <td class="text-end fw-bold text-info">{{ m.f1_score }}%</td>
+                        <td class="text-end">{{ m.support }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-dark fw-bold">
+                        <td colspan="2" class="text-start">Macro Average</td>
+                        <td class="text-end">{{ eval_data.macro_metrics.mean_precision }}%</td>
+                        <td class="text-end">{{ eval_data.macro_metrics.mean_recall }}%</td>
+                        <td class="text-end">{{ eval_data.macro_metrics.mean_specificity }}%</td>
+                        <td class="text-end text-info">{{ eval_data.macro_metrics.macro_f1 }}%</td>
+                        <td class="text-end">{{ eval_data.dataset_summary.evaluation_sample_size }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- BINARY METRICS & CALIBRATION CURVE         -->
+<!-- ========================================== -->
+<div class="row g-4 mb-4">
+    <!-- BINARY (NORMAL VS ANY ABNORMALITY) -->
+    <div class="col-lg-6">
+        <div class="card grad-border h-100 reveal">
+            <div class="card-header py-3 px-4">
+                <h5 class="mb-0 fw-bold">Binary Diagnostic Screening Synthesis</h5>
+                <small class="text-muted">Normal ($P_{\text{normal}}$) vs Any Abnormality ($\sum_{k \neq \text{normal}} P_k$)</small>
+            </div>
+            <div class="card-body p-4">
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered align-middle small mb-0 font-monospace">
+                        <tbody>
+                            <tr>
+                                <th class="bg-body-tertiary" style="width: 50%;">Sensitivity (Anomaly Recall)</th>
+                                <td class="fw-bold text-success text-end fs-6">{{ eval_data.binary_metrics.sensitivity }}%</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Specificity (Normal Recall)</th>
+                                <td class="fw-bold text-end fs-6">{{ eval_data.binary_metrics.specificity }}%</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Positive Predictive Value (PPV)</th>
+                                <td class="text-end">{{ eval_data.binary_metrics.ppv }}%</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Negative Predictive Value (NPV)</th>
+                                <td class="text-end">{{ eval_data.binary_metrics.npv }}%</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Balanced Accuracy</th>
+                                <td class="text-end fw-bold text-info">{{ eval_data.binary_metrics.balanced_accuracy }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 rounded" style="background: var(--glass-bg); border: 1px solid var(--border);">
+                    <small class="text-muted text-uppercase d-block fw-bold mb-1">Binary Screening Contingency Matrix</small>
+                    <div class="d-flex justify-content-between small">
+                        <span>True Abnormalities Detected:</span>
+                        <strong class="font-monospace text-success">{{ eval_data.binary_metrics.tp }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>True Normals Confirmed:</span>
+                        <strong class="font-monospace text-success">{{ eval_data.binary_metrics.tn }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>False Alarms (Normal $\to$ Anomaly):</span>
+                        <strong class="font-monospace text-muted">{{ eval_data.binary_metrics.fp }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>Missed Anomalies (Anomaly $\to$ Normal):</span>
+                        <strong class="font-monospace text-danger">{{ eval_data.binary_metrics.fn }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CALIBRATION & RELIABILITY CURVE -->
+    <div class="col-lg-6">
+        <div class="card grad-border h-100 reveal">
+            <div class="card-header py-3 px-4">
+                <h5 class="mb-0 fw-bold">Confidence Calibration & Reliability Curve</h5>
+                <small class="text-muted">Expected Calibration Error (ECE: {{ eval_data.calibration.expected_calibration_error }}%)</small>
+            </div>
+            <div class="card-body p-4">
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered align-middle small mb-0 font-monospace">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Confidence Bin</th>
+                                <th class="text-end">Mean Model Score</th>
+                                <th class="text-end">Empirical Accuracy</th>
+                                <th class="text-end">Samples</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in eval_data.calibration.bins %}
+                            {% if b.count > 0 %}
+                            <tr>
+                                <td>{{ b.bin_range }}</td>
+                                <td class="text-end text-info">{{ b.mean_confidence }}%</td>
+                                <td class="text-end text-success">{{ b.empirical_accuracy }}%</td>
+                                <td class="text-end text-muted">{{ b.count }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning py-2 px-3 mb-0 small d-flex align-items-center gap-2" style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid var(--warning);">
+                    <span>⚠️</span>
+                    <div>
+                        <strong>Softmax Overconfidence Note:</strong>
+                        Modern deep neural networks often output peak softmax probabilities ($>95\%$) that exceed empirical certainty due to cross-entropy / focal loss temperature sharpening. Softmax score reflects classifier confidence, not definitive medical certainty.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -194,6 +194,9 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="d-inline-flex gap-1">
+                                            <a href="{{ url_for('prediction_trace', prediction_id=p['id']) }}" class="btn btn-outline-info btn-sm px-2 py-1" title="Inspect Developer Trace">
+                                                Trace
+                                            </a>
                                             <a href="{{ url_for('export_single_pdf', prediction_id=p['id']) }}" class="btn btn-accent btn-sm px-2 py-1" title="Download Report PDF">
                                                 PDF
                                             </a>
@@ -438,6 +441,9 @@
                                     <td class="fw-bold">{{ p['confidence'] }}%</td>
                                     <td class="text-end pe-4">
                                         <div class="d-inline-flex gap-1">
+                                            <a href="{{ url_for('prediction_trace', prediction_id=p['id']) }}" class="btn btn-outline-info btn-sm py-0 px-2" title="Inspect Trace">
+                                                Trace
+                                            </a>
                                             <a href="{{ url_for('export_single_pdf', prediction_id=p['id']) }}" class="btn btn-outline-accent btn-sm py-0 px-2" title="Download Report">
                                                 PDF
                                             </a>
